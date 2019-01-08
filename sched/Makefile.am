@@ -182,6 +182,11 @@ cgi_sources = \
     sched_types.cpp \
     time_stats_log.cpp
 
+if ENABLE_BOINCMGE
+cgi_sources +=     sched_mge.cpp 
+endif
+# end of "if ENABLE_BOINCMGE"
+
 cgi_SOURCES = $(cgi_sources)
 cgi_LDADD = $(SERVERLIBS)
 

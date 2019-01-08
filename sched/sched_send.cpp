@@ -56,6 +56,10 @@
 
 #include "sched_send.h"
 
+#ifdef BOINCMGE
+#include "sched_mge.h"
+#endif
+
 #ifdef _USING_FCGI_
 #include "boinc_fcgi.h"
 #endif
@@ -1636,7 +1640,16 @@ void send_work() {
         goto done;
     }
 
+    #ifdef BOINCMGE
+    if (config.mge_scheduling && g_request->use_mge_scheduler) {
+        log_messages.printf(MSG_NORMAL,
+                    "[mixed] using mobile grid extension scheduling as requested by client.\n"
+                );
+        send_work_mge();
+    } else if (config.locality_scheduler_fraction > 0) {
+    #else
     if (config.locality_scheduler_fraction > 0) {
+    #endif
         if (drand() < config.locality_scheduler_fraction) {
             if (config.debug_locality) {
                 log_messages.printf(MSG_NORMAL,
@@ -1711,7 +1724,6 @@ void send_work() {
     } else {
         send_work_score();
     }
-
 done:
     retval = update_host_app_versions(g_reply->results, g_reply->host.id);
     if (retval) {

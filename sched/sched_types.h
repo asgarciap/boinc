@@ -346,6 +346,8 @@ struct SCHEDULER_REQUEST {
     USER_KEYWORDS user_keywords;
     int user_id;
 
+    bool use_mge_scheduler;
+    
     SCHEDULER_REQUEST();
     ~SCHEDULER_REQUEST(){};
     void clear();

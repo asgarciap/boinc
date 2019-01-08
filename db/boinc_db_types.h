@@ -374,18 +374,30 @@ struct HOST {
     OPENCL_CPU_PROP opencl_cpu_prop[MAX_OPENCL_CPU_PLATFORMS];
     bool wsl_available;
     WSLS wsls;
-
+        
     // stuff from time_stats
     double cpu_and_network_available_frac;
     double client_start_time;
     double previous_uptime;
 
-
+    // stuff from device_status
+    bool on_ac_power;
+    bool on_usb_power;
+    double battery_charge_pct;
+    int battery_state;
+    double battery_temperature_celsius;
+    bool wifi_online;
+    bool user_active;
+    char device_name[256];
+    int remain_connection_time;
+    
     int parse(XML_PARSER&);
     int parse_time_stats(XML_PARSER&);
     int parse_net_stats(XML_PARSER&);
     int parse_disk_usage(XML_PARSER&);
 
+    int parse_device_status(XML_PARSER&);
+    
     void fix_nans();
     void clear();
     bool get_opencl_cpu_prop(const char* platform, OPENCL_CPU_PROP&);
@@ -859,6 +871,20 @@ struct CONSENT_TYPE {
     int enabled;
     int project_specific;
     int privacypref;
+    void clear();
+};
+   
+struct DEVICE_STATUS {
+    DB_ID_TYPE hostid;
+    int last_update_time;
+    bool on_ac_power;
+    bool on_usb_power;
+    double battery_charge_pct;
+    int battery_state;      // see common_defs
+    double battery_temperature_celsius;
+    bool wifi_online;
+    bool user_active;
+    char device_name[256];
     void clear();
 };
 

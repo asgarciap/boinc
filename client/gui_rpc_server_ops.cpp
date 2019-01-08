@@ -1338,6 +1338,9 @@ static void handle_report_device_status(GUI_RPC_CONN& grc) {
                         gstate.set_client_state_dirty("Device name changed");
                     }
                 }
+                //TODO estimate remain connection time
+                int remain_connection_time = 0;
+                gstate.device_status.remain_connection_time = remain_connection_time;
                 gstate.device_status = d;
                 gstate.device_status_time = gstate.now;
                 grc.mfout.printf("<success/>\n");
@@ -1346,23 +1349,6 @@ static void handle_report_device_status(GUI_RPC_CONN& grc) {
         }
     }
     grc.mfout.printf("<error/>\n");
-}
-
-int DEVICE_STATUS::parse(XML_PARSER& xp) {
-    while (!xp.get_tag()) {
-        if (xp.match_tag("/device_status")) {
-            return 0;
-        }
-        if (xp.parse_bool("on_ac_power", on_ac_power)) continue;
-        if (xp.parse_bool("on_usb_power", on_usb_power)) continue;
-        if (xp.parse_double("battery_charge_pct", battery_charge_pct)) continue;
-        if (xp.parse_int("battery_state", battery_state)) continue;
-        if (xp.parse_double("battery_temperature_celsius", battery_temperature_celsius)) continue;
-        if (xp.parse_bool("wifi_online", wifi_online)) continue;
-        if (xp.parse_bool("user_active", user_active)) continue;
-        if (xp.parse_str("device_name", device_name, sizeof(device_name))) continue;
-    }
-    return ERR_XML_PARSE;
 }
 
 // Some of the RPCs have empty-element request messages.

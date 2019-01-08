@@ -277,6 +277,7 @@ void SCHEDULER_REQUEST::clear() {
     using_weak_auth = false;
     last_rpc_dayofyear = 0;
     current_rpc_dayofyear = 0;
+    use_mge_scheduler = false;
 }
 
 // return an error message or NULL
@@ -447,6 +448,11 @@ const char* SCHEDULER_REQUEST::parse(XML_PARSER& xp) {
             host.parse_disk_usage(xp);
             continue;
         }
+        if (xp.match_tag("device_status")) {
+            host.parse_device_status(xp);
+            continue;
+        }
+        
         if (xp.match_tag("result")) {
             retval = result.parse_from_client(xp);
             if (retval) continue;
@@ -544,6 +550,8 @@ const char* SCHEDULER_REQUEST::parse(XML_PARSER& xp) {
         }
         if (xp.parse_str("client_brand", client_brand, sizeof(client_brand))) continue;
 
+        if(xp.parse_bool("use_mge_scheduler", use_mge_scheduler)) continue;
+        
         // unused or deprecated stuff follows
 
         if (xp.match_tag("active_task_set")) continue;
@@ -1402,6 +1410,7 @@ int HOST::parse(XML_PARSER& xp) {
             if (!retval) num_opencl_cpu_platforms++;
             continue;
         }
+
         if (xp.parse_bool("wsl_available", wsl_available)) continue;
         if (xp.match_tag("wsl")) {
             wsls.parse(xp);
@@ -1495,6 +1504,27 @@ int HOST::parse_disk_usage(XML_PARSER& xp) {
         if (xp.parse_double("d_project_share", d_boinc_max)) continue;
         log_messages.printf(MSG_NORMAL,
             "HOST::parse_disk_usage(): unrecognized: %s\n",
+            xp.parsed_tag
+        );
+    }
+    return ERR_XML_PARSE;
+}
+
+int HOST::parse_device_status(XML_PARSER& xp) {
+    while (!xp.get_tag()) {
+        if (xp.match_tag("/device_status")) return 0;
+        if (xp.parse_bool("on_ac_power", on_ac_power)) continue;
+        if (xp.parse_bool("on_usb_power", on_usb_power)) continue;
+        if (xp.parse_double("battery_charge_pct", battery_charge_pct)) continue;
+        if (xp.parse_int("battery_state", battery_state)) continue;
+        if (xp.parse_double("battery_temperature_celsius", battery_temperature_celsius)) continue;
+        if (xp.parse_bool("wifi_online", wifi_online)) continue;
+        if (xp.parse_bool("user_active", user_active)) continue;
+        if (xp.parse_str("device_name", device_name, sizeof(device_name))) continue;
+        if (xp.parse_int("remain_connection_time", remain_connection_time)) continue;
+        
+        log_messages.printf(MSG_NORMAL,
+            "HOST::parser_device_status(): unrecognized: %s\n",
             xp.parsed_tag
         );
     }

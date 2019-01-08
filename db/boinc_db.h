@@ -186,6 +186,7 @@ public:
         // return the given percentile of p_fpops
     int fpops_mean(double& mean);
     int fpops_stddev(double& stddev);
+    int update_device_status(HOST&);
     void db_print(char*);
     void db_parse(MYSQL_ROW &row);
     void operator=(HOST& r) {HOST::operator=(r);}
@@ -575,5 +576,10 @@ struct DB_CONSENT_TYPE : public DB_BASE, public CONSENT_TYPE {
     void db_parse(MYSQL_ROW &row);
 };
 
+struct DB_DEVICE_STATUS : public DB_BASE, public DEVICE_STATUS {
+    DB_DEVICE_STATUS(DB_CONN* p=0);
+    void db_print(char*);
+    void db_parse(MYSQL_ROW&);
+};
 
 #endif

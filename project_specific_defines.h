@@ -20,4 +20,8 @@
 //#define _WCG 1
 //#endif
 
+#ifndef BOINCMGE
+#define BOINCMGE 1
+#endif
+
 #endif

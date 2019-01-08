@@ -199,6 +199,7 @@ struct CC_CONFIG {
         // overrides use_certs
     bool vbox_window;
 
+    bool use_mge_scheduler;    
     CC_CONFIG();
     void defaults();
 	int parse(FILE*);

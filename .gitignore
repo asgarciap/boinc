@@ -34,6 +34,10 @@
 /html/nbproject/
 *.project
 
+# KDevelop project files
+*.kdev4
+.kdev4/
+
 #
 *.pfx
 *.pvk

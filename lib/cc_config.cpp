@@ -267,6 +267,11 @@ void CC_CONFIG::defaults() {
     use_certs = false;
     use_certs_only = false;
     vbox_window = false;
+#if defined(ANDROID) && defined(BOINCMGE)
+    use_mge_scheduler = true;
+#else
+    use_mge_scheduler = false;
+#endif
 }
 
 int EXCLUDE_GPU::parse(XML_PARSER& xp) {

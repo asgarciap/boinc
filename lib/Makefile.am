@@ -71,7 +71,8 @@ generic_sources = \
     str_util.cpp \
     url.cpp \
     util.cpp \
-	wslinfo.cpp
+	wslinfo.cpp \
+	device_status.cpp
 
 if OS_WIN32
 win_sources = \

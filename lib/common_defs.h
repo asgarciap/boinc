@@ -320,34 +320,6 @@ struct VERSION_INFO {
     }
 };
 
-// used for Android
-//
-struct DEVICE_STATUS {
-    bool on_ac_power;
-    bool on_usb_power;
-    double battery_charge_pct;
-    int battery_state;      // see above
-    double battery_temperature_celsius;
-    bool wifi_online;
-    bool user_active;
-    char device_name[256];
-        // if present, a user-selected name for the device.
-        // This will be stored by the client as hostinfo.domain_name,
-        // and reported to schedulers.
-
-    int parse(XML_PARSER&);
-    DEVICE_STATUS() {
-        on_ac_power = false;
-        on_usb_power = false;
-        battery_charge_pct = 0;
-        battery_state =  BATTERY_STATE_UNKNOWN;
-        battery_temperature_celsius = 0;
-        wifi_online = false;
-        user_active = false;
-        strcpy(device_name, "");
-    }
-};
-
 #define RUN_MUTEX                   "BoincSingleInstance"
 #define CLIENT_AUTH_FILENAME        "client_auth.xml"
 #define LOCK_FILE_NAME              "lockfile"

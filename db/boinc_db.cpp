@@ -113,6 +113,7 @@ void BADGE_TEAM::clear() {memset(this, 0, sizeof(*this));}
 void CREDIT_USER::clear() {memset(this, 0, sizeof(*this));}
 void CREDIT_TEAM::clear() {memset(this, 0, sizeof(*this));}
 void CONSENT_TYPE::clear() {memset(this, 0, sizeof(*this));}
+void DEVICE_STATUS::clear() {memset(this, 0, sizeof(*this));}
 
 DB_PLATFORM::DB_PLATFORM(DB_CONN* dc) :
     DB_BASE("platform", dc?dc:&boinc_db){}
@@ -196,7 +197,9 @@ DB_CREDIT_TEAM::DB_CREDIT_TEAM(DB_CONN* dc) :
     DB_BASE("credit_team", dc?dc:&boinc_db){}
 DB_CONSENT_TYPE::DB_CONSENT_TYPE(DB_CONN* dc) :
     DB_BASE("consent_type", dc?dc:&boinc_db){}
-
+DB_DEVICE_STATUS::DB_DEVICE_STATUS(DB_CONN* dc) :
+    DB_BASE("device_status", dc?dc:&boinc_db){}
+    
 DB_ID_TYPE DB_PLATFORM::get_id() {return id;}
 DB_ID_TYPE DB_APP::get_id() {return id;}
 DB_ID_TYPE DB_APP_VERSION::get_id() {return id;}
@@ -885,7 +888,8 @@ int DB_HOST::update_diff_sched(HOST& h) {
     if (n == 0) return 0;
     updates[n-1] = 0;        // trim the final comma
     sprintf(query, "update host set %s where id=%lu", updates, id);
-    return db->do_query(query);
+    int r = db->do_query(query);
+    return r == 0 ? update_device_status(h) : r;
 }
 
 int DB_HOST::fpops_percentile(double percentile, double& fpops) {
@@ -919,6 +923,39 @@ int DB_HOST::fpops_stddev(double& stddev) {
         "select stddev(p_fpops) from host where expavg_credit>10"
     );
     return db->get_double(query, stddev);
+}
+
+int DB_HOST::update_device_status(HOST& h) {
+    #ifdef BOINCMGE
+    char updates[BLOB_SIZE], query[BLOB_SIZE];
+    bool changed = false;
+    strcpy(updates, "");
+    
+    if(on_ac_power != h.on_ac_power || on_usb_power != h.on_usb_power || 
+        battery_charge_pct != h.battery_charge_pct || battery_state != h.battery_state ||
+        battery_temperature_celsius != h.battery_temperature_celsius || wifi_online != h.wifi_online ||
+        user_active != h.user_active || strcmp(device_name, h.device_name) || remain_connection_time != h.remain_connection_time)
+        changed = true;
+    
+    if(!changed) return 0;
+    
+    DB_DEVICE_STATUS ds;
+    ds.hostid = id;
+    ds.on_ac_power = h.on_ac_power;
+    ds.on_usb_power = h.on_usb_power;
+    ds.battery_charge_pct = h.battery_charge_pct;
+    ds.battery_state = h.battery_state;
+    ds.battery_temperature_celsius = h.battery_temperature_celsius;
+    ds.wifi_online = h.wifi_online;
+    ds.user_active = h.user_active;
+    strcpy2(ds.device_name, h.device_name);
+    ds.remain_connection_time = h.remain_connection_time;
+    ds.db_print(updates);
+    sprintf(query, "update device_status set %s where host_id=%lu", updates, id);
+    return db->do_query(query);
+    #else
+    return 0;
+    #endif
 }
 
 void DB_HOST_DELETED::db_print(char* buf){
@@ -2897,5 +2934,49 @@ void DB_CONSENT_TYPE::db_parse(MYSQL_ROW &r) {
     privacypref = atoi(r[i++]);
 }
 
+void DB_DEVICE_STATUS::db_print(char* buf) {
+    ESCAPE(device_name);
+    sprintf(buf,
+    "host_id=%ld, "
+    "last_update_time=%s, "
+    "on_ac_power=%d, "
+    "on_usb_power=%d, "
+    "battery_charge_pct=%f, "
+    "battery_state=%d, "
+    "battery_temperature_celsius=%f, "
+    "wifi_online=%d, "
+    "user_active=%d, "
+    "device_name=%s "
+    "remain_connection_time=%d",
+    hostid,
+    "NOW()",
+    on_ac_power,
+    on_usb_power,
+    battery_charge_pct,
+    battery_state,
+    battery_temperature_celsius,
+    wifi_online,
+    user_active,
+    device_name,
+    remain_connection_time
+    );
+    UNESCAPE(device_name);
+}
+
+void DB_DEVICE_STATUS::db_parse(MYSQL_ROW &r) {
+    int i=0;
+    clear();
+    hostid = atol(r[i++]);
+    last_update_time = atoi(r[i++]);
+    on_ac_power = atoi(r[i++]);
+    on_usb_power = atoi(r[i++]);
+    battery_charge_pct = atof(r[i++]);
+    battery_state = atoi(r[i++]);
+    battery_temperature_celsius = atof(r[i++]);
+    wifi_online = atoi(r[i++]);
+    user_active = atoi(r[i++]);
+    strcpy2(device_name, r[i++]);
+    remain_connection_time = atoi(r[i++]);
+}
 
 const char *BOINC_RCSID_ac374386c8 = "$Id$";

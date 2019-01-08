@@ -115,6 +115,12 @@ AC_ARG_ENABLE(install-headers,
     [enable_install_headers=${enableval}],
     [enable_install_headers=yes])
 
+AC_ARG_ENABLE(boincmge,
+    AS_HELP_STRING([--enable-boincmge],
+                   [enable building the boinc mobile grid extension]),
+    [enable_boincmge=${enableval}],
+    [enable_boincmge=no])
+    
 AC_ARG_ENABLE(boinczip,
     AS_HELP_STRING([--enable-boinczip],
                    [enable building the boinc zip library]),
@@ -391,6 +397,14 @@ dnl
     dnl AC_SUBST(CXXFLAGS)
     dnl AC_SUBST(CFLAGS)
 dnl fi
+
+dnl enable boinc mge flags
+if test "${enable_boincmge}" = yes; then
+    CXXFLAGS="$CXXFLAGS -DBOINCMGE"
+    CFLAGS="$CFLAGS -DBOINCMGE"
+    AC_SUBST(CXXFLAGS)
+    AC_SUBST(CFLAGS)
+fi
 
 if test "${enable_server}" = yes; then
    AC_CHECK_MYSQL
@@ -1053,6 +1067,7 @@ AM_CONDITIONAL(ENABLE_APPS, [test "${enable_apps}" = yes])
 AM_CONDITIONAL(ENABLE_BOINCCRYPT, [test "x${enable_server}" = xyes  || test "x${enable_client}" = xyes ])
 AM_CONDITIONAL(INSTALL_HEADERS, [test "${enable_install_headers}" = yes])
 AM_CONDITIONAL(HAVE_CUDA_LIB, [test "${enable_client}" = yes -a -f ./coprocs/CUDA/posix/${boinc_platform}/libcudart.so])
+AM_CONDITIONAL(ENABLE_BOINCMGE, [test "${enable_boincmge}" = yes])
 
 dnl ======================================================================
 dnl some more vodoo required for building portable client-binary (client, clientgui)

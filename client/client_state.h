@@ -57,6 +57,7 @@ using std::vector;
 #include "project_list.h"
 #include "scheduler_op.h"
 #include "time_stats.h"
+#include "device_status.h"
 
 #ifdef SIM
 #include "../sched/edf_sim.h"

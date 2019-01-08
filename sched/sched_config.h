@@ -220,6 +220,10 @@ struct SCHED_CONFIG {
     bool debug_vda;
     bool debug_version_select;
 
+    bool mge_scheduling;
+        // use the mge scheduler if requested by the client
+        // will override locality scheduling config
+    
     int parse(FILE*);
     int parse_aux(FILE*);
     int parse_file(const char *dir = 0);

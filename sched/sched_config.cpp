@@ -325,6 +325,8 @@ int SCHED_CONFIG::parse(FILE* f) {
         if (xp.parse_bool("keyword_sched", keyword_sched)) continue;
         if (xp.parse_bool("rte_no_stats", rte_no_stats)) continue;
 
+        if (xp.parse_bool("mge_scheduling", mge_scheduling)) continue;
+
         //////////// SCHEDULER LOG FLAGS /////////
 
         if (xp.parse_bool("debug_assignment", debug_assignment)) continue;

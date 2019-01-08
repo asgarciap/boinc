@@ -50,6 +50,7 @@
 #include "network.h"
 #include "notice.h"
 #include "prefs.h"
+#include "device_status.h"
 
 struct GUI_URL {
     std::string name;
