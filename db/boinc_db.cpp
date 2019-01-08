@@ -934,7 +934,8 @@ int DB_HOST::update_device_status(HOST& h) {
     if(on_ac_power != h.on_ac_power || on_usb_power != h.on_usb_power || 
         battery_charge_pct != h.battery_charge_pct || battery_state != h.battery_state ||
         battery_temperature_celsius != h.battery_temperature_celsius || wifi_online != h.wifi_online ||
-        user_active != h.user_active || strcmp(device_name, h.device_name) || remain_connection_time != h.remain_connection_time)
+        user_active != h.user_active || strcmp(device_name, h.device_name) || 
+        strcmp(mge_sched_data, h.mge_sched_data) || device_status_time != h.device_status_time)
         changed = true;
     
     if(!changed) return 0;
@@ -949,7 +950,8 @@ int DB_HOST::update_device_status(HOST& h) {
     ds.wifi_online = h.wifi_online;
     ds.user_active = h.user_active;
     strcpy2(ds.device_name, h.device_name);
-    ds.remain_connection_time = h.remain_connection_time;
+    strcpy2(ds.mge_sched_data, h.mge_sched_data);
+    ds.last_update_time = h.device_status_time;
     ds.db_print(updates);
     sprintf(query, "update device_status set %s where host_id=%lu", updates, id);
     return db->do_query(query);
@@ -2936,9 +2938,10 @@ void DB_CONSENT_TYPE::db_parse(MYSQL_ROW &r) {
 
 void DB_DEVICE_STATUS::db_print(char* buf) {
     ESCAPE(device_name);
+    ESCAPE(mge_sched_data);
     sprintf(buf,
     "host_id=%ld, "
-    "last_update_time=%s, "
+    "last_update_time=%f, "
     "on_ac_power=%d, "
     "on_usb_power=%d, "
     "battery_charge_pct=%f, "
@@ -2947,9 +2950,9 @@ void DB_DEVICE_STATUS::db_print(char* buf) {
     "wifi_online=%d, "
     "user_active=%d, "
     "device_name=%s "
-    "remain_connection_time=%d",
+    "mge_sched_data=%s",
     hostid,
-    "NOW()",
+    last_update_time,
     on_ac_power,
     on_usb_power,
     battery_charge_pct,
@@ -2958,16 +2961,17 @@ void DB_DEVICE_STATUS::db_print(char* buf) {
     wifi_online,
     user_active,
     device_name,
-    remain_connection_time
+    mge_sched_data
     );
     UNESCAPE(device_name);
+    UNESCAPE(mge_sched_data);
 }
 
 void DB_DEVICE_STATUS::db_parse(MYSQL_ROW &r) {
     int i=0;
     clear();
     hostid = atol(r[i++]);
-    last_update_time = atoi(r[i++]);
+    last_update_time = atof(r[i++]);
     on_ac_power = atoi(r[i++]);
     on_usb_power = atoi(r[i++]);
     battery_charge_pct = atof(r[i++]);
@@ -2976,7 +2980,7 @@ void DB_DEVICE_STATUS::db_parse(MYSQL_ROW &r) {
     wifi_online = atoi(r[i++]);
     user_active = atoi(r[i++]);
     strcpy2(device_name, r[i++]);
-    remain_connection_time = atoi(r[i++]);
+    strcpy2(mge_sched_data, r[i++]);
 }
 
 const char *BOINC_RCSID_ac374386c8 = "$Id$";

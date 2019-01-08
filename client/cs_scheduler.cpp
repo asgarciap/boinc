@@ -230,6 +230,10 @@ int CLIENT_STATE::make_scheduler_request(PROJECT* p) {
     // report device status to the scheduler
     
 #if defined(ANDROID) && defined(BOINCMGE)
+    fprintf(f,
+        "    <device_status_time>%f</device_status_time>\n"
+        device_status_time
+    );
     device_status.write(mf);
 #endif
     

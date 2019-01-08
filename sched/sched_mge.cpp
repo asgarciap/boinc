@@ -51,7 +51,82 @@
 #include "sched_util.h"
 #include "sched_version.h"
 
-void send_work_mge() {
+void get_sched_data(char* data, double& avg, int &samples, double& start_time) {
+    
+    avg = 0.0;
+    samples = 0;
+    start_time = time(0);
+    //parses "avg;samples;start_time;"
+    std::string datastr(data);
+    std::size_t pos = datastr.find(";");
+    if(pos != std::string::npos) {
+        avg = atof(datastr.substr(0,pos).c_str());
+        std::size_t pos2 = datastr.find(";",pos);
+        if(pos2 != std::string::npos) {
+            samples = atoi(datastr.substr(pos+1,(pos2-pos+1)).c_str());
+            std::size_t pos3 = datastr.find(";",pos2);
+            if(pos3 != std::string::npos)
+                start_time = atof(datastr.substr(pos2+1,(pos3-pos2+1)).c_str());
+        }
+    }
+    
+    log_messages.printf(MSG_NORMAL,
+                        "[mge_sched] [HOST#%lu] mge sched data. avg:%f samples:%d start_time:%f\n",
+                        g_reply->host.id, avg, samples, start_time);
+}
+
+void send_work_mge() {  
+    char buf[256];
+    
+    //g_request->host // host structure sent by the client
+    //g_reply->host // currenty host record in DB
+    //we need to modify g_request->host if we want to modify the DB host record
+    SCHED_DB_RESULT result;
+    
+    // Update battery time estimation.
+    DB_DEVICE_STATUS ds;
+    int samples = 0;
+    double start_time;
+    double uptimeavg = 0, delta = 0;
+    sprintf(buf,
+        "where host_id=%lu", g_reply->host.id);
+    ds.enumerate(buf);
+    if (!ds.enumerate(buf)) {
+        
+        ds.end_enumerate();
+        
+        //get average data
+        get_sched_data(ds.mge_sched_data, uptimeavg, samples, start_time);
+        
+        //estimate discharging rate
+        double dr = (g_request->host.device_status_time - ds.last_update_time) / (ds.battery_charge_pct-g_request->host.battery_charge_pct);
+        
+        //estimate remain time
+        double uptime = g_request->host.device_status_time-start_time+(ds.battery_charge_pct*dr);
+        
+        //update average remain time
+        samples++;
+        delta = uptime - uptimeavg;
+        uptimeavg += delta/samples;
+
+        //ok now we can check workunits that can be send using the estimated remaining uptime (uptimeavg)
+        
+    }else {
+        //we don't have any device_status record for this host.
+        start_time=time(0);
+    }
+    
+    std::string mge_data("");
+    mge_data.append(std::to_string(uptimeavg)); //avg
+    mge_data.append(";");
+    mge_data.append(std::to_string(samples)); //samples
+    mge_data.append(";");
+    mge_data.append(std::to_string(start_time)); //start time
+    mge_data.append(";");
+    strlcpy(g_request->host.mge_sched_data, mge_data.c_str(), sizeof(g_request->host.mge_sched_data));
+    log_messages.printf(MSG_NORMAL,
+                        "[mge_sched] [HOST#%lu] updating mge sched data. avg:%f samples:%d start_time:%f\n",
+                        g_reply->host.id, uptimeavg, samples, start_time);
     //TODO
     //Se debe usar el metodo add_result_to_reply(...) que esta en sched_send para agregar los resultados.
     

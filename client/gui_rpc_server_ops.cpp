@@ -1338,9 +1338,6 @@ static void handle_report_device_status(GUI_RPC_CONN& grc) {
                         gstate.set_client_state_dirty("Device name changed");
                     }
                 }
-                //TODO estimate remain connection time
-                int remain_connection_time = 0;
-                gstate.device_status.remain_connection_time = remain_connection_time;
                 gstate.device_status = d;
                 gstate.device_status_time = gstate.now;
                 grc.mfout.printf("<success/>\n");

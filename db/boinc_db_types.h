@@ -389,7 +389,8 @@ struct HOST {
     bool wifi_online;
     bool user_active;
     char device_name[256];
-    int remain_connection_time;
+    char mge_sched_data[256];
+    double device_status_time;
     
     int parse(XML_PARSER&);
     int parse_time_stats(XML_PARSER&);
@@ -876,7 +877,7 @@ struct CONSENT_TYPE {
    
 struct DEVICE_STATUS {
     DB_ID_TYPE hostid;
-    int last_update_time;
+    double last_update_time;
     bool on_ac_power;
     bool on_usb_power;
     double battery_charge_pct;
@@ -885,6 +886,7 @@ struct DEVICE_STATUS {
     bool wifi_online;
     bool user_active;
     char device_name[256];
+    char mge_sched_data[256]; // specific mge scheduler data, can be used by any scheduler policy to store aditional info
     void clear();
 };
 

@@ -35,9 +35,6 @@ struct DEVICE_STATUS {
         // if present, a user-selected name for the device.
         // This will be stored by the client as hostinfo.domain_name,
         // and reported to schedulers.
-    int remain_connection_time;
-        // estimated remain connection time.
-        // calculated every time a new gui rpc status arrives
     int parse(XML_PARSER&);
     void write(MIOFILE&);
     DEVICE_STATUS();

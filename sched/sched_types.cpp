@@ -453,6 +453,8 @@ const char* SCHEDULER_REQUEST::parse(XML_PARSER& xp) {
             continue;
         }
         
+        if (xp.parse_double("device_status_time",host.device_status_time)) continue;
+        
         if (xp.match_tag("result")) {
             retval = result.parse_from_client(xp);
             if (retval) continue;
@@ -1521,7 +1523,6 @@ int HOST::parse_device_status(XML_PARSER& xp) {
         if (xp.parse_bool("wifi_online", wifi_online)) continue;
         if (xp.parse_bool("user_active", user_active)) continue;
         if (xp.parse_str("device_name", device_name, sizeof(device_name))) continue;
-        if (xp.parse_int("remain_connection_time", remain_connection_time)) continue;
         
         log_messages.printf(MSG_NORMAL,
             "HOST::parser_device_status(): unrecognized: %s\n",

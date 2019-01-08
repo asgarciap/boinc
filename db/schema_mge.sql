@@ -1,6 +1,6 @@
 create table device_status (
     host_id                     integer not null default 0,
-    last_update_time            integer not null default 0,
+    last_update_time            double not null default 0,
     on_ac_power                 tinyint not null default 0,
     on_usb_power                tinyint not null default 0,
     battery_charge_pct          double not null default 0,

@@ -27,7 +27,6 @@ DEVICE_STATUS::DEVICE_STATUS()
     wifi_online = false;
     user_active = false;
     strcpy(device_name, "");
-    remain_connection_time = 0;
 }
 
 int DEVICE_STATUS::parse(XML_PARSER& xp) {
@@ -58,7 +57,6 @@ void DEVICE_STATUS::write(MIOFILE& out) {
         "        <wifi_online>%d</wifi_online>\n"
         "        <user_active>%d</user_active>\n"
         "        <device_name>%s</device_name>\n"
-        "        <remain_connection_time>%d</remain_connection_time>\n"
         "    </device_status>\n",
         on_ac_power ? 1 : 0,
         on_usb_power ? 1 : 0,
@@ -67,7 +65,6 @@ void DEVICE_STATUS::write(MIOFILE& out) {
         battery_temperature_celsius,
         wifi_online ? 1 : 0,
         user_active ? 1 : 0,
-        device_name,
-        remain_connection_time
+        device_name
     );
 }
