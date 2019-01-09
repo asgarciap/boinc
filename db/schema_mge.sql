@@ -9,7 +9,7 @@ create table device_status (
     wifi_online                 tinyint not null default 0,
     user_active                 tinyint not null default 0,    
     device_name                 varchar(254) not null default '',
-    remain_connection_time      integer not null default 0
+    mge_sched_data              varchar(254) not null default ''
 ) engine = InnoDB;
 
 alter table device_status add unique(host_id);

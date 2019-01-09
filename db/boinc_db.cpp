@@ -888,8 +888,7 @@ int DB_HOST::update_diff_sched(HOST& h) {
     if (n == 0) return 0;
     updates[n-1] = 0;        // trim the final comma
     sprintf(query, "update host set %s where id=%lu", updates, id);
-    int r = db->do_query(query);
-    return r == 0 ? update_device_status(h) : r;
+    return db->do_query(query);
 }
 
 int DB_HOST::fpops_percentile(double percentile, double& fpops) {
@@ -926,7 +925,6 @@ int DB_HOST::fpops_stddev(double& stddev) {
 }
 
 int DB_HOST::update_device_status(HOST& h) {
-    #ifdef BOINCMGE
     char updates[BLOB_SIZE], query[BLOB_SIZE];
     bool changed = false;
     strcpy(updates, "");
@@ -955,9 +953,6 @@ int DB_HOST::update_device_status(HOST& h) {
     ds.db_print(updates);
     sprintf(query, "update device_status set %s where host_id=%lu", updates, id);
     return db->do_query(query);
-    #else
-    return 0;
-    #endif
 }
 
 void DB_HOST_DELETED::db_print(char* buf){
@@ -2949,8 +2944,8 @@ void DB_DEVICE_STATUS::db_print(char* buf) {
     "battery_temperature_celsius=%f, "
     "wifi_online=%d, "
     "user_active=%d, "
-    "device_name=%s "
-    "mge_sched_data=%s",
+    "device_name='%s', "
+    "mge_sched_data='%s' ",
     hostid,
     last_update_time,
     on_ac_power,

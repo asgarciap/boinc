@@ -1643,7 +1643,7 @@ void send_work() {
     #ifdef BOINCMGE
     if (config.mge_scheduling && g_request->use_mge_scheduler) {
         log_messages.printf(MSG_NORMAL,
-                    "[mixed] using mobile grid extension scheduling as requested by client.\n"
+                    "[mge_sched] using mobile grid extension scheduling as requested by client.\n"
                 );
         send_work_mge();
     } else if (config.locality_scheduler_fraction > 0) {

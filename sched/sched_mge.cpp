@@ -77,10 +77,7 @@ void get_sched_data(char* data, double& avg, int &samples, double& start_time) {
 
 void send_work_mge() {  
     char buf[256];
-    
-    //g_request->host // host structure sent by the client
-    //g_reply->host // currenty host record in DB
-    //we need to modify g_request->host if we want to modify the DB host record
+
     SCHED_DB_RESULT result;
     
     // Update battery time estimation.
@@ -113,7 +110,17 @@ void send_work_mge() {
         
     }else {
         //we don't have any device_status record for this host.
+        //insert a new empty record to this host
         start_time=time(0);
+        DB_DEVICE_STATUS d;
+        d.hostid=g_reply->host.id;
+        int retval = d.insert();
+        if(retval) {
+            log_messages.printf(MSG_CRITICAL,
+                                "[mge_sched] [HOST#%lu] Error when trying to insert device_status record. %s\n",
+                                g_reply->host.id,boincerror(retval)
+                               );
+        }
     }
     
     std::string mge_data("");
@@ -123,7 +130,10 @@ void send_work_mge() {
     mge_data.append(";");
     mge_data.append(std::to_string(start_time)); //start time
     mge_data.append(";");
-    strlcpy(g_request->host.mge_sched_data, mge_data.c_str(), sizeof(g_request->host.mge_sched_data));
+    
+    //changing g_reply will cause an update in BD
+    //this data is not send to the client since is not writen in g_reply.write method.
+    strlcpy(g_reply->host.mge_sched_data, mge_data.data(), sizeof(g_reply->host.mge_sched_data));
     log_messages.printf(MSG_NORMAL,
                         "[mge_sched] [HOST#%lu] updating mge sched data. avg:%f samples:%d start_time:%f\n",
                         g_reply->host.id, uptimeavg, samples, start_time);

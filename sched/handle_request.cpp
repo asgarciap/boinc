@@ -627,6 +627,18 @@ static int update_host_record(HOST& initial_host, HOST& xhost, USER& user) {
             "host.update() failed: %s\n", boincerror(retval)
         );
     }
+    
+    #ifdef BOINCMGE
+    if(!retval) {
+        retval = host.update_device_status(initial_host);
+        if(retval) {
+            log_messages.printf(MSG_CRITICAL,
+                "host.update_device_status() failed: %s\n", boincerror(retval)
+            );
+        }
+    }
+    #endif
+
     return 0;
 }
 
