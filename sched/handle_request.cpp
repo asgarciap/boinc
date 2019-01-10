@@ -595,6 +595,18 @@ static int modify_host_struct(HOST& host) {
     strlcpy(host.product_name, g_request->host.product_name, sizeof(host.product_name));
     host.fix_nans();
 
+    #ifdef BOINCMGE
+        host.on_ac_power = g_request->host.on_ac_power;
+        host.on_usb_power = g_request->host.on_usb_power;
+        host.battery_charge_pct = g_request->host.battery_charge_pct;
+        host.battery_state = g_request->host.battery_state;
+        host.battery_temperature_celsius = g_request->host.battery_temperature_celsius;
+        host.wifi_online = g_request->host.wifi_online;
+        host.user_active = g_request->host.user_active;
+        if(strlen(g_request->host.device_name))
+            safe_strcpy(host.device_name, g_request->host.device_name);
+        host.device_status_time = g_request->host.device_status_time;
+    #endif
     return 0;
 }
 

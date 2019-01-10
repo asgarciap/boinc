@@ -39,6 +39,7 @@
 #include "error_numbers.h"
 #include "filesys.h"
 #include "str_util.h"
+#include "base64.h"
 
 #include "sched_check.h"
 #include "sched_config.h"
@@ -57,7 +58,8 @@ void get_sched_data(char* data, double& avg, int &samples, double& start_time) {
     samples = 0;
     start_time = time(0);
     //parses "avg;samples;start_time;"
-    std::string datastr(data);
+    std::string data64(data);
+    std::string datastr = r_base64_decode(data64.data(), data64.size());
     std::size_t pos = datastr.find(";");
     if(pos != std::string::npos) {
         avg = atof(datastr.substr(0,pos).c_str());
@@ -85,9 +87,7 @@ void send_work_mge() {
     int samples = 0;
     double start_time;
     double uptimeavg = 0, delta = 0;
-    sprintf(buf,
-        "where host_id=%lu", g_reply->host.id);
-    ds.enumerate(buf);
+    sprintf(buf, "where host_id=%lu", g_reply->host.id);
     if (!ds.enumerate(buf)) {
         
         ds.end_enumerate();
@@ -130,10 +130,13 @@ void send_work_mge() {
     mge_data.append(";");
     mge_data.append(std::to_string(start_time)); //start time
     mge_data.append(";");
-    
+    std::string mgedata64 = r_base64_encode(mge_data.data(), mge_data.size());
     //changing g_reply will cause an update in BD
     //this data is not send to the client since is not writen in g_reply.write method.
-    strlcpy(g_reply->host.mge_sched_data, mge_data.data(), sizeof(g_reply->host.mge_sched_data));
+    strlcpy(g_reply->host.mge_sched_data, mgedata64.data(), sizeof(g_reply->host.mge_sched_data));
+    g_reply->host.battery_charge_pct = g_request->host.battery_charge_pct;
+    g_reply->host.battery_state = g_request->host.battery_state;
+    g_reply->host.battery_temperature_celsius = g_request->host.battery_temperature_celsius;
     log_messages.printf(MSG_NORMAL,
                         "[mge_sched] [HOST#%lu] updating mge sched data. avg:%f samples:%d start_time:%f\n",
                         g_reply->host.id, uptimeavg, samples, start_time);

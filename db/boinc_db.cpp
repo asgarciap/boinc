@@ -928,7 +928,8 @@ int DB_HOST::update_device_status(HOST& h) {
     char updates[BLOB_SIZE], query[BLOB_SIZE];
     bool changed = false;
     strcpy(updates, "");
-    
+    //if there is any difference between "h" (original record) a "this" new record
+    //then update the entire device_status with the new info (in "this")
     if(on_ac_power != h.on_ac_power || on_usb_power != h.on_usb_power || 
         battery_charge_pct != h.battery_charge_pct || battery_state != h.battery_state ||
         battery_temperature_celsius != h.battery_temperature_celsius || wifi_online != h.wifi_online ||
@@ -940,16 +941,16 @@ int DB_HOST::update_device_status(HOST& h) {
     
     DB_DEVICE_STATUS ds;
     ds.hostid = id;
-    ds.on_ac_power = h.on_ac_power;
-    ds.on_usb_power = h.on_usb_power;
-    ds.battery_charge_pct = h.battery_charge_pct;
-    ds.battery_state = h.battery_state;
-    ds.battery_temperature_celsius = h.battery_temperature_celsius;
-    ds.wifi_online = h.wifi_online;
-    ds.user_active = h.user_active;
-    strcpy2(ds.device_name, h.device_name);
-    strcpy2(ds.mge_sched_data, h.mge_sched_data);
-    ds.last_update_time = h.device_status_time;
+    ds.on_ac_power = on_ac_power;
+    ds.on_usb_power = on_usb_power;
+    ds.battery_charge_pct = battery_charge_pct;
+    ds.battery_state = battery_state;
+    ds.battery_temperature_celsius = battery_temperature_celsius;
+    ds.wifi_online = wifi_online;
+    ds.user_active = user_active;
+    strcpy2(ds.device_name, device_name);
+    strcpy2(ds.mge_sched_data, mge_sched_data);
+    ds.last_update_time = device_status_time;
     ds.db_print(updates);
     sprintf(query, "update device_status set %s where host_id=%lu", updates, id);
     return db->do_query(query);
