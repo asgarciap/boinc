@@ -58,15 +58,16 @@ void get_sched_data(char* data, double& avg, int &samples, double& start_time) {
     samples = 0;
     start_time = time(0);
     //parses "avg;samples;start_time;"
-    std::string data64(data);
+    std::string data64;
+    data64.assign(data);
     std::string datastr = r_base64_decode(data64.data(), data64.size());
     std::size_t pos = datastr.find(";");
     if(pos != std::string::npos) {
         avg = atof(datastr.substr(0,pos).c_str());
-        std::size_t pos2 = datastr.find(";",pos);
+        std::size_t pos2 = datastr.find(";",pos+1);
         if(pos2 != std::string::npos) {
             samples = atoi(datastr.substr(pos+1,(pos2-pos+1)).c_str());
-            std::size_t pos3 = datastr.find(";",pos2);
+            std::size_t pos3 = datastr.find(";",pos2+1);
             if(pos3 != std::string::npos)
                 start_time = atof(datastr.substr(pos2+1,(pos3-pos2+1)).c_str());
         }
@@ -87,6 +88,7 @@ void send_work_mge() {
     int samples = 0;
     double start_time;
     double uptimeavg = 0, delta = 0;
+    double newuptime = 0; // remaining connection time
     sprintf(buf, "where host_id=%lu", g_reply->host.id);
     if (!ds.enumerate(buf)) {
         
@@ -95,23 +97,35 @@ void send_work_mge() {
         //get average data
         get_sched_data(ds.mge_sched_data, uptimeavg, samples, start_time);
         
-        //estimate discharging rate
-        double dr = (g_request->host.device_status_time - ds.last_update_time) / (ds.battery_charge_pct-g_request->host.battery_charge_pct);
-        
-        //estimate remain time
-        double uptime = g_request->host.device_status_time-start_time+(ds.battery_charge_pct*dr);
-        
-        //update average remain time
-        samples++;
-        delta = uptime - uptimeavg;
-        uptimeavg += delta/samples;
-
-        //ok now we can check workunits that can be send using the estimated remaining uptime (uptimeavg)
+        // -------- SEAS algorithm --------
+        //estimate discharging rate if there were a change in battery charge percentage
+        double newcharge = g_request->host.battery_charge_pct;
+        double oldcharge = ds.battery_charge_pct;
+        double newtime = g_request->host.device_status_time;
+        double oldtime = ds.last_update_time;
+        if(oldcharge != newcharge) {
+            double dr = (newtime - oldtime) / (oldcharge-newcharge);
+            
+            //estimate remain time
+            double uptime = newtime - start_time + newcharge*dr;
+            
+            //update average remain time
+            samples++;
+            delta = uptime - uptimeavg;
+            uptimeavg += delta/samples;
+            newuptime = uptimeavg - (newtime-start_time);
+            
+            log_messages.printf(MSG_NORMAL, "[mge_sched] [HOST#%lu] Discharge rate: 1%%/%f secs - Est. uptime (avg): %f until 0%%.\n",
+                    g_reply->host.id,dr,newuptime
+            );
+            
+        }
+        // -------- end of SEAS algorithm --------
         
     }else {
         //we don't have any device_status record for this host.
         //insert a new empty record to this host
-        start_time=time(0);
+        start_time=time(NULL);
         DB_DEVICE_STATUS d;
         d.hostid=g_reply->host.id;
         int retval = d.insert();
@@ -138,8 +152,15 @@ void send_work_mge() {
     g_reply->host.battery_state = g_request->host.battery_state;
     g_reply->host.battery_temperature_celsius = g_request->host.battery_temperature_celsius;
     log_messages.printf(MSG_NORMAL,
-                        "[mge_sched] [HOST#%lu] updating mge sched data. avg:%f samples:%d start_time:%f\n",
+                        "[mge_sched] [HOST#%lu] updating mge sched data. avg uptime:%f samples:%d start_time:%f\n",
                         g_reply->host.id, uptimeavg, samples, start_time);
+    
+    //If the node has enough time to process any of the result, send to it
+    if(newuptime > 0)
+    {
+        
+    }
+    
     //TODO
     //Se debe usar el metodo add_result_to_reply(...) que esta en sched_send para agregar los resultados.
     
