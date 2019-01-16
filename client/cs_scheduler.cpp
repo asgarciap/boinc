@@ -231,7 +231,7 @@ int CLIENT_STATE::make_scheduler_request(PROJECT* p) {
     
 #if defined(ANDROID) && defined(BOINCMGE)
     fprintf(f,
-        "    <device_status_time>%f</device_status_time>\n"
+        "    <device_status_time>%f</device_status_time>\n",
         device_status_time
     );
     device_status.write(mf);
