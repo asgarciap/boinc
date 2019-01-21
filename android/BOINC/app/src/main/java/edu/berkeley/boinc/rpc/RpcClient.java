@@ -1147,7 +1147,9 @@ public class RpcClient {
 			mRequest.append(globalPrefs.daily_xfer_period_days);
 			mRequest.append("</daily_xfer_period_days>\n  <network_wifi_only>");
 			mRequest.append(globalPrefs.network_wifi_only ? 1 : 0);
-			mRequest.append("</network_wifi_only>\n");
+			mRequest.append("</network_wifi_only>\n  <boincmge_scheduler_enabled>");
+			mRequest.append(globalPrefs.boincmge_scheduler_enabled ? 1 : 0);
+			mRequest.append("</boincmge_scheduler_enabled>\n");
 			
 			// write days prefs
 			TimePreferences.TimeSpan[] weekPrefs = globalPrefs.cpu_times.week_prefs;

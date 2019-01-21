@@ -81,6 +81,7 @@ void GLOBAL_PREFS_MASK::set_all() {
     vm_max_used_frac = true;
     work_buf_additional_days = true;
     work_buf_min_days = true;
+    boincmge_scheduler_enabled = true;
 }
 
 bool GLOBAL_PREFS_MASK::are_prefs_set() {
@@ -118,6 +119,7 @@ bool GLOBAL_PREFS_MASK::are_prefs_set() {
     if (vm_max_used_frac) return true;
     if (work_buf_additional_days) return true;
     if (work_buf_min_days) return true;
+    if (boincmge_scheduler_enabled) return true;
     return false;
 }
 
@@ -131,6 +133,7 @@ bool GLOBAL_PREFS_MASK::are_simple_prefs_set() {
     if (run_if_user_active) return true;
     if (run_on_batteries) return true;
     if (start_hour) return true;
+    if (boincmge_scheduler_enabled) return true;
     return false;
 }
 
@@ -263,6 +266,12 @@ void GLOBAL_PREFS::defaults() {
     
     override_file_present = false;
 
+#if defined(BOINCMGE) && defined(ANDROID)
+    boincmge_scheduler_enabled = true;
+#else
+    boincmge_scheduler_enabled = false;
+#endif
+    
     // don't initialize source_project, source_scheduler,
     // mod_time, host_specific here
     // since they are outside of <venue> elements,
@@ -604,6 +613,10 @@ int GLOBAL_PREFS::parse_override(
         if (xp.parse_bool("host_specific", host_specific)) {
             continue;
         }
+        if (xp.parse_bool("boincmge_scheduler_enabled", boincmge_scheduler_enabled)) {
+            continue;
+        }
+        
         // false means don't print anything
         xp.skip_unexpected(false, "GLOBAL_PREFS::parse_override");
     }
@@ -678,7 +691,8 @@ int GLOBAL_PREFS::write(MIOFILE& f) {
         "   <daily_xfer_limit_mb>%f</daily_xfer_limit_mb>\n"
         "   <daily_xfer_period_days>%d</daily_xfer_period_days>\n"
         "   <override_file_present>%d</override_file_present>\n"
-        "   <network_wifi_only>%d</network_wifi_only>\n",
+        "   <network_wifi_only>%d</network_wifi_only>\n"
+        "   <boincmge_scheduler_enabled>%d</boincmge_scheduler_enabled>\n",
         source_project,
         mod_time,
         battery_charge_min_pct,
@@ -714,7 +728,8 @@ int GLOBAL_PREFS::write(MIOFILE& f) {
         daily_xfer_limit_mb,
         daily_xfer_period_days,
         override_file_present?1:0,
-        network_wifi_only?1:0
+        network_wifi_only?1:0,
+        boincmge_scheduler_enabled?1:0
     );
     if (max_ncpus) {
         f.printf("   <max_cpus>%d</max_cpus>\n", max_ncpus);
@@ -890,7 +905,9 @@ int GLOBAL_PREFS::write_subset(MIOFILE& f, GLOBAL_PREFS_MASK& mask) {
     if (mask.network_wifi_only) {
         f.printf("   <network_wifi_only>%d</network_wifi_only>\n", network_wifi_only?1:0 );
     }
-
+    if (mask.boincmge_scheduler_enabled) {
+        f.printf("   <boincmge_scheduler_enabled>%d</boincmge_scheduler_enabled>\n", boincmge_scheduler_enabled?1:0 );
+    }
     write_day_prefs(f);
     f.printf("</global_preferences>\n");
     return 0;

@@ -56,7 +56,9 @@ public class GlobalPreferences implements Parcelable{
 	public int daily_xfer_period_days;
 	public boolean override_file_present;
 	public boolean network_wifi_only;
-	
+
+	public boolean boincmge_scheduler_enabled;
+
 	public TimePreferences cpu_times = new TimePreferences();
 	public TimePreferences net_times = new TimePreferences();
 	
@@ -98,7 +100,8 @@ public class GlobalPreferences implements Parcelable{
 				leave_apps_in_memory,
 				dont_verify_images,
 				override_file_present,
-				network_wifi_only
+				network_wifi_only,
+				boincmge_scheduler_enabled
 		});
 	}
 	
@@ -136,6 +139,7 @@ public class GlobalPreferences implements Parcelable{
 		dont_verify_images = bArray[4];
 		override_file_present = bArray[5];
 		network_wifi_only = bArray[6];
+		boincmge_scheduler_enabled = bArray[7];
 	}
 	
 	public static final Parcelable.Creator<GlobalPreferences> CREATOR = new Parcelable.Creator<GlobalPreferences>() {

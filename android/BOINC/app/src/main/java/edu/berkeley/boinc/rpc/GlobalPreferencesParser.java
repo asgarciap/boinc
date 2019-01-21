@@ -173,6 +173,8 @@ public class GlobalPreferencesParser extends BaseParser {
 						mPreferences.override_file_present = Integer.parseInt(mCurrentElement.toString()) != 0;
 					} else if (localName.equalsIgnoreCase("network_wifi_only")) {
 						mPreferences.network_wifi_only = Integer.parseInt(mCurrentElement.toString()) != 0;
+					} else if (localName.equalsIgnoreCase( "boincmge_scheduler_enabled")) {
+						mPreferences.boincmge_scheduler_enabled = Integer.parseInt(mCurrentElement.toString()) != 0;
 					}
 				}
 			}

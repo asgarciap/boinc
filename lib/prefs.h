@@ -70,7 +70,8 @@ struct GLOBAL_PREFS_MASK {
     bool vm_max_used_frac;
     bool work_buf_additional_days;
     bool work_buf_min_days;
-
+    bool boincmge_scheduler_enabled;
+    
     GLOBAL_PREFS_MASK();
     void clear();
     bool are_prefs_set();
@@ -180,6 +181,8 @@ struct GLOBAL_PREFS {
     double work_buf_additional_days;
     double work_buf_min_days;
 
+    bool boincmge_scheduler_enabled;
+    
     char source_project[256];
     char source_scheduler[256];
     bool host_specific;

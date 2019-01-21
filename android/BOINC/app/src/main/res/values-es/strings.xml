@@ -156,6 +156,7 @@
   <string name="prefs_category_storage">Almacenamiento</string>
   <string name="prefs_category_memory">Memoria</string>
   <string name="prefs_category_debug">Depurar</string>
+  <string name="prefs_category_boincmge">Extensión Grids Móviles</string>
   <string name="prefs_show_advanced_header">Mostrar opciones avanzadas...</string>
   <string name="prefs_suspend_when_screen_on">Pausar la computación cuando la pantalla esté encendida</string>
   <string name="prefs_stationary_device_mode_header">Modo de dispositivo estacionario</string>
@@ -195,6 +196,7 @@
   <string name="prefs_gui_log_level_description">Especifica el detalle de los mensajes de log de la interfaz gráfica.</string>
   <string name="prefs_unit_celsius">ºC</string>
   <string name="prefs_unit_seconds">seg</string>
+  <string name="prefs_boincmge_enabled">Usar planificador para grids móviles</string>
   <!--projects tab strings-->
   <string name="projects_loading">Leyendo proyectos...</string>
   <string name="projects_add">Añadir proyecto</string>

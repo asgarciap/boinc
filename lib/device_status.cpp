@@ -49,7 +49,7 @@ int DEVICE_STATUS::parse(XML_PARSER& xp) {
 void DEVICE_STATUS::write(MIOFILE& out) {
     out.printf(
         "    <device_status>\n"
-        "        <on_ac_power>%d</oc_ac_power>\n"
+        "        <on_ac_power>%d</on_ac_power>\n"
         "        <on_usb_power>%d</on_usb_power>\n"
         "        <battery_charge_pct>%f</battery_charge_pct>\n"
         "        <battery_state>%d</battery_state>\n"

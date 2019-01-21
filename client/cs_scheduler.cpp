@@ -149,7 +149,7 @@ int CLIENT_STATE::make_scheduler_request(PROJECT* p) {
         cc_config.allow_multiple_clients?1:0,
         g_use_sandbox?1:0,
 #if defined(ANDROID) && defined(BOINCMGE)
-        cc_config.use_mge_scheduler,
+        global_prefs.boincmge_scheduler_enabled,
 #endif
         p->dont_request_more_work?1:0
     );

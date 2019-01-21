@@ -156,6 +156,7 @@
   <string name="prefs_category_storage">Storage</string>
   <string name="prefs_category_memory">Memory</string>
   <string name="prefs_category_debug">Debug</string>
+  <string name="prefs_category_boincmge">Mobile Grid Extension</string>
   <string name="prefs_show_advanced_header">Show advanced preferences and controls…</string>
   <string name="prefs_suspend_when_screen_on">Pause computation when screen is on</string>
   <string name="prefs_stationary_device_mode_header">Stationary device mode</string>
@@ -195,6 +196,7 @@
   <string name="prefs_gui_log_level_description">Specifies verbosity of GUI log messages.</string>
   <string name="prefs_unit_celsius">°C</string>
   <string name="prefs_unit_seconds">sec</string>
+  <string name="prefs_boincmge_enabled">Enable Mobile Grid Extension Scheduler</string>
   <!--projects tab strings-->
   <string name="projects_loading">Reading projects…</string>
   <string name="projects_add">Add project</string>

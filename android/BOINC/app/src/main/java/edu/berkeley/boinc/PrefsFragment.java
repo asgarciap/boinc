@@ -171,6 +171,10 @@ public class PrefsFragment extends Fragment {
 		if(!stationaryDeviceMode) data.add(new PrefsListItemWrapperBool(getActivity(),R.string.prefs_suspend_when_screen_on,R.string.prefs_category_general,BOINCActivity.monitor.getSuspendWhenScreenOn()));
 		data.add(new PrefsListItemWrapperText(getActivity(),R.string.prefs_general_device_name_header,R.string.prefs_category_general,BOINCActivity.monitor.getHostInfo().domain_name));
 
+		// Mobile Grid Extension Options
+		data.add(new PrefsListItemWrapper(getActivity(), R.string.prefs_category_boincmge, true));
+		data.add(new PrefsListItemWrapperBool(getActivity(), R.string.prefs_boincmge_enabled, R.string.prefs_category_boincmge,clientPrefs.boincmge_scheduler_enabled));
+
 		// Network
     	data.add(new PrefsListItemWrapper(getActivity(),R.string.prefs_category_network,true));
 		data.add(new PrefsListItemWrapperBool(getActivity(),R.string.prefs_network_wifi_only_header,R.string.prefs_category_network,clientPrefs.network_wifi_only));
@@ -629,6 +633,11 @@ public class PrefsFragment extends Fragment {
 					// reload complete layout to remove/add power preference elements
 					populateLayout();
 					break;
+                case R.string.prefs_boincmge_enabled:
+                    clientPrefs.boincmge_scheduler_enabled = isSet;
+                    updateBoolPreference(ID, isSet);
+                    new WriteClientPrefsAsync().execute(clientPrefs);
+                    break;
 				}
 			} catch(RemoteException e) {
 				if(Logging.ERROR) Log.e(Logging.TAG,"PrefsFragment.BoolOnClick: onClick() error: ", e);
