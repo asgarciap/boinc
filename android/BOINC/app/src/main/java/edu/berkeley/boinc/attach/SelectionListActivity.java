@@ -227,6 +227,7 @@ public class SelectionListActivity extends FragmentActivity{
             if (result == null) return;
 
             SelectionListActivity.this.entries.add(new ProjectListEntry()); // add account manager option to bottom of list
+			SelectionListActivity.this.entries.add(new ProjectListEntry(true)); // add add project by url option to bottom of list
             SelectionListAdapter listAdapter = new SelectionListAdapter(SelectionListActivity.this, R.id.listview,entries);
             lv.setAdapter(listAdapter);
         }
@@ -236,6 +237,7 @@ public class SelectionListActivity extends FragmentActivity{
 		public ProjectInfo info;
 		public boolean checked;
 		public boolean am; //indicates that element is account manager entry
+		public boolean byUrl; //indicates that element is "add project by url" entry
 
         /**
          * The {@link Collator} used when comparing {@code ProjectListEntry}s.
@@ -261,7 +263,12 @@ public class SelectionListActivity extends FragmentActivity{
 		 * Creates Account manager list object
 		 */
 		public ProjectListEntry() {
-			this.am = true;
+			this(false);
+		}
+
+		public ProjectListEntry(boolean byUrl) {
+			this.am = !byUrl;
+			this.byUrl = byUrl;
 		}
 
         /**

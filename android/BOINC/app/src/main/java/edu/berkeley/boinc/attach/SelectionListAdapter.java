@@ -63,26 +63,48 @@ public class SelectionListAdapter extends ArrayAdapter<ProjectListEntry>{
 		LinearLayout textWrapper = v.findViewById(R.id.text_wrapper);
         
         if(listItem.am) {
-        	// element is account manager
-    		name.setText(activity.getString(R.string.attachproject_acctmgr_header));
-    		description.setText(activity.getString(R.string.attachproject_acctmgr_list_desc));
-    		cb.setVisibility(View.GONE);
-    		summary.setVisibility(View.GONE);
-    		ImageView button = v.findViewById(R.id.am_button_image);
-    		button.setVisibility(View.VISIBLE);
-    		OnClickListener listener = new OnClickListener() {
-    			@Override
-    			public void onClick(View v) {
-    				if(Logging.DEBUG) Log.d(Logging.TAG, "SelectionListAdapter: account manager clicked.");
-    	    		AcctMgrFragment dialog = new AcctMgrFragment();
-    	    		dialog.setReturnToMainActivity(); // configure, so dialog returns to main activity when finished
-    	    		dialog.show(activity.getSupportFragmentManager(), activity.getString(R.string.attachproject_acctmgr_header));
-    			}
-    		};
-    		v.setOnClickListener(listener);
-    		name.setOnClickListener(listener);
-    		description.setOnClickListener(listener);
-    		button.setOnClickListener(listener);
+			// element is account manager
+			name.setText(activity.getString(R.string.attachproject_acctmgr_header));
+			description.setText(activity.getString(R.string.attachproject_acctmgr_list_desc));
+			cb.setVisibility(View.GONE);
+			summary.setVisibility(View.GONE);
+			ImageView button = v.findViewById(R.id.am_button_image);
+			button.setVisibility(View.VISIBLE);
+			OnClickListener listener = new OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					if (Logging.DEBUG)
+						Log.d(Logging.TAG, "SelectionListAdapter: account manager clicked.");
+					AcctMgrFragment dialog = new AcctMgrFragment();
+					dialog.setReturnToMainActivity(); // configure, so dialog returns to main activity when finished
+					dialog.show(activity.getSupportFragmentManager(), activity.getString(R.string.attachproject_acctmgr_header));
+				}
+			};
+			v.setOnClickListener(listener);
+			name.setOnClickListener(listener);
+			description.setOnClickListener(listener);
+			button.setOnClickListener(listener);
+		} else if(listItem.byUrl) {
+        	// element is add project using url
+			name.setText(R.string.attachproject_list_manual_button);
+			description.setText(R.string.attachproject_list_manual_desc);
+			cb.setVisibility(View.GONE);
+			summary.setVisibility(View.GONE);
+			ImageView button = v.findViewById(R.id.prjbyurl_button_image);
+			button.setVisibility(View.VISIBLE);
+			OnClickListener listener = new OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					if (Logging.DEBUG)
+						Log.d(Logging.TAG, "SelectionListAdapter: add project by url clicked.");
+					ManualUrlInputFragment dialog = new ManualUrlInputFragment();
+					dialog.show(activity.getSupportFragmentManager(), activity.getString(R.string.attachproject_list_manual_button));
+				}
+			};
+			v.setOnClickListener(listener);
+			name.setOnClickListener(listener);
+			description.setOnClickListener(listener);
+			button.setOnClickListener(listener);
         } else {
         	// element is project option
     		name.setText(listItem.info.name);

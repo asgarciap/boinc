@@ -11,6 +11,7 @@
   <string name="attachproject_list_desc">Selecciona los proyectos científicos a los que quieres contribuir:</string>
   <string name="attachproject_list_header">Elige un proyecto</string>
   <string name="attachproject_list_manual_button">Añadir un proyecto por URL</string>
+  <string name="attachproject_list_manual_desc">Añadir a un proyecto personalizado usando su URL</string>
   <string name="attachproject_list_manual_dialog_title">URL del proyecto:</string>
   <string name="attachproject_list_manual_dialog_button">Añadir proyecto</string>
   <string name="attachproject_list_manual_no_url">URL del proyecto:</string>
