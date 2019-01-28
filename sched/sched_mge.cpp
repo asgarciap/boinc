@@ -52,36 +52,34 @@
 #include "sched_util.h"
 #include "sched_version.h"
 
-void get_sched_data(char* data, double& avg, int &samples, double& start_time) {
+void get_sched_data(char* data, double& avg, int &samples, double& start_time, double &dr, double& nextupdate) {
     
     avg = 0.0;
     samples = 0;
     start_time = time(0);
+    dr = 0;
     //parses "avg;samples;start_time;"
     std::string data64;
     data64.assign(data);
     std::string datastr = r_base64_decode(data64.data(), data64.size());
-    std::size_t pos = datastr.find(";");
-    if(pos != std::string::npos) {
-        avg = atof(datastr.substr(0,pos).c_str());
-        std::size_t pos2 = datastr.find(";",pos+1);
-        if(pos2 != std::string::npos) {
-            samples = atoi(datastr.substr(pos+1,(pos2-pos+1)).c_str());
-            std::size_t pos3 = datastr.find(";",pos2+1);
-            if(pos3 != std::string::npos)
-                start_time = atof(datastr.substr(pos2+1,(pos3-pos2+1)).c_str());
-        }
+    std::vector<std::string> vdata = split(datastr, ';');
+    if(vdata.size() >= 5) {
+        avg = atof(vdata[0].c_str());
+        samples = atoi(vdata[1].c_str());
+        start_time = atof(vdata[2].c_str());
+        dr = atof(vdata[3].c_str());
+        nextupdate = atof(vdata[4].c_str());
     }
     
     log_messages.printf(MSG_NORMAL,
-                        "[mge_sched] [HOST#%lu] mge sched data. avg:%f samples:%d start_time:%f\n",
-                        g_reply->host.id, avg, samples, start_time);
+                        "[mge_sched] [HOST#%lu] mge sched data. avg:%f samples:%d start_time:%f dr:%f\n",
+                        g_reply->host.id, avg, samples, start_time,dr);
 }
 
 void send_work_mge() {  
     char buf[256];
 
-    SCHED_DB_RESULT result;
+    //SCHED_DB_RESULT result;
     
     // Update battery time estimation.
     DB_DEVICE_STATUS ds;
@@ -89,13 +87,16 @@ void send_work_mge() {
     double start_time;
     double uptimeavg = 0, delta = 0;
     double newuptime = 0; // remaining connection time
+    double dr = 0;
+    double nextupdate = 0; //next time we expect (as maximum) the device status report
+    double tewd = 0; //total amount of time or work sent to the device (in seconds)
     sprintf(buf, "where host_id=%lu", g_reply->host.id);
     if (!ds.enumerate(buf)) {
         
         ds.end_enumerate();
         
         //get average data
-        get_sched_data(ds.mge_sched_data, uptimeavg, samples, start_time);
+        get_sched_data(ds.mge_sched_data, uptimeavg, samples, start_time,dr,nextupdate);
         
         // -------- SEAS algorithm --------
         //estimate discharging rate if there were a change in battery charge percentage
@@ -103,29 +104,31 @@ void send_work_mge() {
         double oldcharge = ds.battery_charge_pct;
         double newtime = g_request->host.device_status_time;
         double oldtime = ds.last_update_time;
-        if(oldcharge != newcharge) {
-            double dr = (newtime - oldtime) / (oldcharge-newcharge);
-            
-            //estimate remain time
-            double uptime = newtime - start_time + newcharge*dr;
-            
-            //update average remain time
-            samples++;
-            delta = uptime - uptimeavg;
-            uptimeavg += delta/samples;
-            newuptime = uptimeavg - (newtime-start_time);
-            
-            log_messages.printf(MSG_NORMAL, "[mge_sched] [HOST#%lu] Discharge rate: 1%%/%f secs - Est. uptime (avg): %f until 0%%.\n",
-                    g_reply->host.id,dr,newuptime
-            );
-            
-        }
+        
+        //if the battery charge didn't change or it has been a "long time" since the last update
+        //use the last discharge rate saved
+        if(oldcharge > newcharge && newtime <= nextupdate)
+            dr = (newtime - oldtime) / (oldcharge-newcharge);
+        
+        //estimate remain time
+        double uptime = newtime - start_time + newcharge*dr;
+        
+        //update average remain time
+        samples++;
+        delta = uptime - uptimeavg;
+        uptimeavg += delta/samples;
+        newuptime = uptimeavg - (newtime-start_time);
+        
+        log_messages.printf(MSG_NORMAL, "[mge_sched] [HOST#%lu] Discharge rate: 1%%/%f secs - Est. uptime (avg): %f until 0%%.\n",
+                g_reply->host.id,dr,newuptime
+        );
         // -------- end of SEAS algorithm --------
         
     }else {
         //we don't have any device_status record for this host.
         //insert a new empty record to this host
         start_time=time(NULL);
+        dr = 600; //default discharge rate is 1% every 10 minutes (arbitrary value) .. check
         DB_DEVICE_STATUS d;
         d.hostid=g_reply->host.id;
         int retval = d.insert();
@@ -136,25 +139,7 @@ void send_work_mge() {
                                );
         }
     }
-    
-    std::string mge_data("");
-    mge_data.append(std::to_string(uptimeavg)); //avg
-    mge_data.append(";");
-    mge_data.append(std::to_string(samples)); //samples
-    mge_data.append(";");
-    mge_data.append(std::to_string(start_time)); //start time
-    mge_data.append(";");
-    std::string mgedata64 = r_base64_encode(mge_data.data(), mge_data.size());
-    //changing g_reply will cause an update in BD
-    //this data is not send to the client since is not writen in g_reply.write method.
-    strlcpy(g_reply->host.mge_sched_data, mgedata64.data(), sizeof(g_reply->host.mge_sched_data));
-    g_reply->host.battery_charge_pct = g_request->host.battery_charge_pct;
-    g_reply->host.battery_state = g_request->host.battery_state;
-    g_reply->host.battery_temperature_celsius = g_request->host.battery_temperature_celsius;
-    log_messages.printf(MSG_NORMAL,
-                        "[mge_sched] [HOST#%lu] updating mge sched data. avg uptime:%f samples:%d start_time:%f\n",
-                        g_reply->host.id, uptimeavg, samples, start_time);
-    
+        
     //If the node has enough time to process any of the result, send to it
     if(newuptime > 0)
     {
@@ -170,7 +155,6 @@ void send_work_mge() {
             );
         }
         bool sema_locked = false;
-
         for (int j=0; j<nscan; j++) {
             int i = (j+rnd_off) % ssp->max_wu_results;
             WU_RESULT& wu_result = ssp->wu_results[i];
@@ -236,9 +220,18 @@ void send_work_mge() {
             }
             
             double ewd = estimate_duration(wu, *bavp);
+            tewd += ewd;
             
-            if(ewd > newuptime) { // the job can't be finish before the battery dies
+            // the job can't be finish before the battery dies
+            if((tewd > newuptime) && !g_reply->host.on_ac_power && !g_reply->host.on_usb_power) {
+                log_messages.printf(MSG_NORMAL,
+                        "[mge_sched] [HOST#%lu] [RESULT#%lu] Device can't finish the job before running out of batteries.\n",
+                        g_reply->host.id, wu_result.resultid);
                 continue;
+            }else {
+                log_messages.printf(MSG_NORMAL,
+                        "[mge_sched] [HOST#%lu] [RESULT#%lu] Trying to assing job to device. Estimated job duration: %f seconds. Total job assigned: %f\n",
+                        g_reply->host.id, wu_result.resultid, ewd, tewd);
             }
             
             wu_result.state = g_pid;
@@ -293,5 +286,38 @@ void send_work_mge() {
         }
 
         g_wreq->best_app_versions.clear();
+    }else {
+        log_messages.printf(MSG_NORMAL,
+                        "[mge_sched] [HOST#%lu] can't send jobs to device because remaining battery time (%f seconds) is too short.\n",
+                        g_reply->host.id, newuptime);
     }
+    
+    //we will expect for the next report, twice the total of work sent (it should come before that time)
+    if(tewd > 0)
+        nextupdate = (g_request->host.device_status_time)+(tewd*2);
+    else
+        nextupdate = (g_request->host.device_status_time)+120;
+    
+    //update device_status record in BD
+    std::string mge_data("");
+    mge_data.append(std::to_string(uptimeavg)); //avg
+    mge_data.append(";");
+    mge_data.append(std::to_string(samples)); //samples
+    mge_data.append(";");
+    mge_data.append(std::to_string(start_time)); //start time
+    mge_data.append(";");
+    mge_data.append(std::to_string(dr)); //discharge rate (seconds)
+    mge_data.append(";");
+    mge_data.append(std::to_string(nextupdate));
+    mge_data.append(";");
+    std::string mgedata64 = r_base64_encode(mge_data.data(), mge_data.size());
+    //changing g_reply will cause an update in BD
+    //this data is not send to the client since is not writen in g_reply.write method.
+    strlcpy(g_reply->host.mge_sched_data, mgedata64.data(), sizeof(g_reply->host.mge_sched_data));
+    g_reply->host.battery_charge_pct = g_request->host.battery_charge_pct;
+    g_reply->host.battery_state = g_request->host.battery_state;
+    g_reply->host.battery_temperature_celsius = g_request->host.battery_temperature_celsius;
+    log_messages.printf(MSG_NORMAL,
+                        "[mge_sched] [HOST#%lu] updating mge sched data. avg uptime:%f samples:%d start_time:%f dr:%f\n",
+                        g_reply->host.id, uptimeavg, samples, start_time, dr);
 }

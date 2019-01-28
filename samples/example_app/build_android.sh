@@ -2,6 +2,7 @@
 #script to compile Wrapper for Android
 
 export ANDROIDTC="$HOME/android-tc"
+export ANDROIDTC=$HOME/Android/Toolchains
 export TCBINARIES="$ANDROIDTC/bin"
 export TCINCLUDES="$ANDROIDTC/arm-linux-androideabi"
 export TCSYSROOT="$ANDROIDTC/sysroot"
