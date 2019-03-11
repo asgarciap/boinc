@@ -98,6 +98,9 @@ int SCHED_CONFIG::parse(FILE* f) {
     user_url = true;
     user_country = true;
 
+    mge_scheduling = false;
+    mge_replication = false;
+    
     if (!xp.parse_start("boinc")) return ERR_XML_PARSE;
     if (!xp.parse_start("config")) return ERR_XML_PARSE;
     while (!xp.get_tag()) {
@@ -326,7 +329,8 @@ int SCHED_CONFIG::parse(FILE* f) {
         if (xp.parse_bool("rte_no_stats", rte_no_stats)) continue;
 
         if (xp.parse_bool("mge_scheduling", mge_scheduling)) continue;
-
+        if (xp.parse_bool("mge_replication", mge_replication)) continue;
+        
         //////////// SCHEDULER LOG FLAGS /////////
 
         if (xp.parse_bool("debug_assignment", debug_assignment)) continue;

@@ -15,13 +15,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-extern void send_work_mge();
+#include "sched_send.h"
+#include "sched_mge.h"
 
-//exposed functions to be available in the MGE API
-BEST_APP_VERSION* get_best_app_version(WORKUNIT* wu);
-int estimate_workunit_duration(WU_RESULT* wr, BEST_APP_VERSION* bavp);
-int add_result_to_reply(WORKUNIT* wu, BEST_APP_VERSION* bavp);
-void save_mge_sched_data(HOST&, const char* data, int len);
-const char* get_mge_sched_data(HOST&);
-DEVICE_STATUS get_last_device_status(HOST&);
-void mge_log(const char* format, ...);
+extern void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus);
+extern void calc_workunit_replicas(SCHEDULER_REQUEST* sreq, WORKUNIT wu, int& reps, int& quorum);

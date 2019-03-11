@@ -224,6 +224,9 @@ struct SCHED_CONFIG {
         // use the mge scheduler if requested by the client
         // will override locality scheduling config
     
+    bool mge_replication;
+        // enable BOINC MGE replication mechanism
+    
     int parse(FILE*);
     int parse_aux(FILE*);
     int parse_file(const char *dir = 0);

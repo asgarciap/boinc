@@ -58,6 +58,7 @@
 
 #ifdef BOINCMGE
 #include "sched_mge.h"
+#include "sched_mge_api.h"
 #endif
 
 #ifdef _USING_FCGI_
@@ -1051,6 +1052,39 @@ int add_result_to_reply(
 
     }
 
+    #if BOINCMGE    
+    // BOINC-MGE replication
+    // note that this replication differs from BOINC mechanism
+    // here we replicate even if the host is trusted, because we replicate
+    // in order to finish the job quickly.
+    if(config.mge_replication) {
+            int nresults = 1;
+            int min_quorum = 1;
+            calc_workunit_replicas(g_request, wu, nresults, min_quorum);
+            if(nresults > 1) {
+                //min quorum can't be greater than the number of replicas
+                if(min_quorum > nresults) min_quorum = nresults-1;
+                DB_WORKUNIT dbwu;
+                char buf[256];
+                sprintf(buf,
+                    "target_nresults=%d, min_quorum=%d, transition_time=%ld",
+                    nresults, min_quorum, time(0)
+                );
+                dbwu.id = wu.id;
+                if (config.debug_send) {
+                    log_messages.printf(MSG_NORMAL,
+                        "[mge-send] [WU#%lu] replicating result. num replicas=%d, min_quorum=%d\n", wu.id, nresults, min_quorum
+                    );
+                }
+                retval = dbwu.update_field(buf);
+                if (retval) {
+                    log_messages.printf(MSG_CRITICAL,
+                        "WU update failed: %s", boincerror(retval)
+                    );
+                }
+            }
+    }
+    #else //BOINCMGE
     // If we're sending an unreplicated job to an untrusted host,
     // mark it as replicated
     //
@@ -1082,6 +1116,7 @@ int add_result_to_reply(
             }
         }
     }
+    #endif //BOINCMGE
 
     // if the app uses locality scheduling lite,
     // add the job's files to the list of those on host
