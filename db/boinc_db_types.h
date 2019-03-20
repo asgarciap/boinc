@@ -531,6 +531,21 @@ struct CREDITED_JOB {
     void clear();
 };
 
+struct DEVICE_STATUS {
+    DB_ID_TYPE hostid;
+    double last_update_time;
+    bool on_ac_power;
+    bool on_usb_power;
+    double battery_charge_pct;
+    int battery_state;      // see common_defs
+    double battery_temperature_celsius;
+    bool wifi_online;
+    bool user_active;
+    char device_name[256];
+    char mge_sched_data[256]; // specific mge scheduler data, can be used by any scheduler policy to store aditional info
+    void clear();
+};
+
 // WARNING: be very careful about changing any values,
 // especially for a project already running -
 // the database will become inconsistent
@@ -652,6 +667,13 @@ struct RESULT {
     double peak_swap_size;
     double peak_disk_usage;
 
+#if BOINCMGE
+    char xml_dev_start[BLOB_SIZE];     // device status when this result was sent to client
+    char xml_dev_end[BLOB_SIZE];    // device status when this result was received from client
+    DEVICE_STATUS dev_start;
+    DEVICE_STATUS dev_end;
+    int parse_device_status(XML_PARSER&, DEVICE_STATUS&);
+#endif
     void clear();
     RESULT() {clear();}
 };
@@ -872,21 +894,6 @@ struct CONSENT_TYPE {
     int enabled;
     int project_specific;
     int privacypref;
-    void clear();
-};
-   
-struct DEVICE_STATUS {
-    DB_ID_TYPE hostid;
-    double last_update_time;
-    bool on_ac_power;
-    bool on_usb_power;
-    double battery_charge_pct;
-    int battery_state;      // see common_defs
-    double battery_temperature_celsius;
-    bool wifi_online;
-    bool user_active;
-    char device_name[256];
-    char mge_sched_data[256]; // specific mge scheduler data, can be used by any scheduler policy to store aditional info
     void clear();
 };
 

@@ -101,6 +101,7 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
 // next function implements the sched mge api replication using reinforcement learning approach
 void calc_workunit_replicas(SCHEDULER_REQUEST* sreq, WORKUNIT wu, int& reps, int& quorum)
 {
+    SCHED_DB_RESULT r;
     reps = 1;
     quorum = 1;
 }

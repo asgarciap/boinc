@@ -1256,6 +1256,13 @@ void DB_RESULT::db_parse(MYSQL_ROW &r) {
     peak_working_set_size = atof(r[i++]);
     peak_swap_size = atof(r[i++]);
     peak_disk_usage = atof(r[i++]);
+#if BOINCMGE
+    char xml_dev_start[BLOB_SIZE];
+    char xml_dev_end[BLOB_SIZE];
+    strcpy2(xml_dev_start, r[i++]);
+    strcpy2(xml_dev_end, r[i++]);
+    
+#endif
 }
 
 // faster version.
