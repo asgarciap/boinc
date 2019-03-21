@@ -214,6 +214,8 @@ public:
     int make_unsent(
         APP&, int size_class, int n, const char* order_clause, int& nchanged
     );
+    //query all results with n replicas and not older than max_time
+    void enumerate(int target_nresults, int max_time);
 };
 
 class DB_WORKUNIT : public DB_BASE, public WORKUNIT {

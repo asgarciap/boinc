@@ -666,14 +666,6 @@ struct RESULT {
     double peak_working_set_size;
     double peak_swap_size;
     double peak_disk_usage;
-
-#if BOINCMGE
-    char xml_dev_start[BLOB_SIZE];     // device status when this result was sent to client
-    char xml_dev_end[BLOB_SIZE];    // device status when this result was received from client
-    DEVICE_STATUS dev_start;
-    DEVICE_STATUS dev_end;
-    int parse_device_status(XML_PARSER&, DEVICE_STATUS&);
-#endif
     void clear();
     RESULT() {clear();}
 };
