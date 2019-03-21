@@ -223,6 +223,7 @@ void save_mge_sched_data(HOST& h, const char* data, int len)
     sprintf(buf, "where host_id=%lu", h.id);
     if (d.enumerate(buf)) 
     {
+        d.end_enumerate();
         int retval = d.insert();
         if(retval) 
         {

@@ -666,6 +666,14 @@ struct RESULT {
     double peak_working_set_size;
     double peak_swap_size;
     double peak_disk_usage;
+    
+    //the following only when we have boinc-mge enabled
+    #ifdef BOINCMGE
+    double initial_battery_charge_pct;
+    double initial_battery_temp_celcius;
+    double final_battery_charge_pct;
+    double final_battery_temp_celcius;
+    #endif
     void clear();
     RESULT() {clear();}
 };

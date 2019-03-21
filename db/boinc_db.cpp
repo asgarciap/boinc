@@ -1257,11 +1257,10 @@ void DB_RESULT::db_parse(MYSQL_ROW &r) {
     peak_swap_size = atof(r[i++]);
     peak_disk_usage = atof(r[i++]);
 #if BOINCMGE
-    char xml_dev_start[BLOB_SIZE];
-    char xml_dev_end[BLOB_SIZE];
-    strcpy2(xml_dev_start, r[i++]);
-    strcpy2(xml_dev_end, r[i++]);
-    
+    initial_battery_charge_pct = atof(r[i++]);
+    initial_battery_temp_celcius = atof(r[i++]);
+    final_battery_charge_pct = atof(r[i++]);
+    final_battery_temp_celcius = atof(r[i++]);
 #endif
 }
 

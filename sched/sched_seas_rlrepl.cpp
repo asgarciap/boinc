@@ -1,4 +1,7 @@
 #include "sched_mge_api.h"
+#include "boinc_db.h"
+
+#include <map>
 
 void decode_sched_data(const char* data, double& avg, int &samples, double& start_time, double &dr, double& nextupdate)
 {
@@ -101,7 +104,95 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
 // next function implements the sched mge api replication using reinforcement learning approach
 void calc_workunit_replicas(SCHEDULER_REQUEST* sreq, WORKUNIT wu, int& reps, int& quorum)
 {
-    SCHED_DB_RESULT r;
-    reps = 1;
+    //always use quorum=1
     quorum = 1;
+    int K_FACTOR=10;
+    int K_WASTED_ENERGY_IMPACT = 7;
+    double EXPLORATIVE_PROB = 0.2; //20% of the times we use an explorative strategy
+    
+    std::string data(get_mge_sched_data(sreq->host));
+    double avg, start_time, dr, nextupdate;
+    int samples;
+    decode_sched_data(data.c_str(),avg,samples,start_time, dr, nextupdate);
+    if(dr <= 0) dr = 1;
+    
+    //check last replicas results from 1 to 10 max.
+    DB_WORKUNIT dbwu;
+    char where[256];
+    std::map<int,double> repl_reward;
+   
+    BEST_APP_VERSION* bavp = get_best_app_version(wu);
+    double ewd = estimate_duration(wu, *bavp);
+    int max_repls = 0;
+    for(int i=1; i <= 10; ++i) {
+        sprintf(where, "where target_nresults=%d and id <> %d order by create_time desc", i, wu.id);
+        if (!dbwu.enumerate(where)) {
+            max_repls = i;
+            int delay_bound = dbwu.delay_bound;
+            int wuid = dbwu.id;
+            dbwu.end_enumerate();
+            DB_RESULT r;
+            sprintf(where, "where workunitid=%d order by received_time desc", wuid);
+            int nr = 0;
+            double wasted_energy = 0;
+            bool found_good_replica = false;
+            while(!r.enumerate(where)) {
+                nr++;
+                //boinc could generate more replicas if it doesn't receive the result from client.
+                //if this is the case, then this workunit didnt met QoS quota
+                if(nr > i) {
+                    repl_reward[i] = -K_FACTOR;
+                    break;
+                }
+                
+                //we need
+                int roundtrip_time = r.received_time - r.sent_time;
+                if(roundtrip_time > 0 && roundtrip_time <= 2*delay_bound) found_good_replica = true;
+                
+                //if this result reports 0% wasted energy, we use the discharge rate from the current
+                //client to calculate an estimated wasted energy using the roundtrip time
+                double d_wasted_energy = (r.final_battery_charge_pct - r.initial_battery_charge_pct);
+                if(d_wasted_energy <= 0) {
+                    if(roundtrip_time > 0)
+                        d_wasted_energy = roundtrip_time*dr;
+                    else
+                        d_wasted_energy = delay_bound*2*dr;
+                }
+                wasted_energy += d_wasted_energy;
+            }
+            
+            if(found_good_replica) {
+                double t = wasted_energy/(i*estimate_duration*dr);
+                double bt;
+                
+                if(t >= 1) bt = K_WASTED_ENERGY_IMPACT;
+                else bt = K_WASTED_ENERGY_IMPACT*t;
+                
+                repl_reward[i] = K_FACTOR-bt;
+            }
+            else {
+                repl_reward[i] = -K_FACTOR;
+            }
+            r.end_enumerate();
+        }else {
+            break;
+        }
+    }
+    
+    double val = (double) rand()/RAND_MAX;
+    
+    if(val < EXPLORATIVE_PROB) {
+        //choose a random number between 1 and max_repls
+        reps = (rand() % max_repls)+1;
+    }else {
+        // sort repl_reward and take the one with the higher reward (exploitative)
+        reps = 1;
+        double v = 0;
+        for(auto it=repl_reward.begin(); it != repl_reward.end(); ++it) {
+            if(it->second > v) {
+                v = it->second;
+                reps = it->first;
+            }
+        }
+    }
 }
