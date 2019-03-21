@@ -121,11 +121,11 @@ void calc_workunit_replicas(SCHEDULER_REQUEST* sreq, WORKUNIT wu, int& reps, int
     char where[256];
     std::map<int,double> repl_reward;
    
-    BEST_APP_VERSION* bavp = get_best_app_version(wu);
-    double ewd = estimate_duration(wu, *bavp);
+    BEST_APP_VERSION* bavp = get_best_app_version(&wu);
+    double estimate_wu_duration = estimate_duration(wu, *bavp);
     int max_repls = 0;
     for(int i=1; i <= 10; ++i) {
-        sprintf(where, "where target_nresults=%d and id <> %d order by create_time desc", i, wu.id);
+        sprintf(where, "where target_nresults=%d and id <> %lu order by create_time desc", i, wu.id);
         if (!dbwu.enumerate(where)) {
             max_repls = i;
             int delay_bound = dbwu.delay_bound;
@@ -162,7 +162,7 @@ void calc_workunit_replicas(SCHEDULER_REQUEST* sreq, WORKUNIT wu, int& reps, int
             }
             
             if(found_good_replica) {
-                double t = wasted_energy/(i*estimate_duration*dr);
+                double t = wasted_energy/(i*estimate_wu_duration*dr);
                 double bt;
                 
                 if(t >= 1) bt = K_WASTED_ENERGY_IMPACT;

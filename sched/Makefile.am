@@ -185,6 +185,7 @@ cgi_sources = \
 
 if ENABLE_BOINCMGE
 cgi_sources +=     sched_mge.cpp 
+cgi_sources +=     sched_seas_rlrepl.cpp 
 endif
 # end of "if ENABLE_BOINCMGE"
 
