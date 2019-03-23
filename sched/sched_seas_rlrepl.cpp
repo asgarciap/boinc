@@ -36,6 +36,14 @@ std::string encode_sched_data(double uptimeavg, int samples, double start_time, 
     return mge_data;
 }
 
+double time_inprogress(SCHEDULER_REQUEST* sreq)
+{
+    double total=0.0;
+    for(std::size_t i=0; i<sreq->ip_results.size(); i++)
+        total += sreq->ip_results[i].estimated_completion_time;
+    return total;
+}
+
 // next function implements the sched mge api using SEAS algorithm
 void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
 {
@@ -70,25 +78,34 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
     newuptime = uptimeavg - (newtime-start_time);
     
     if(newuptime > 0) {
-        for(int i=0; i<nwus; i++) {
-            WU_RESULT wu = wu_results[i];
-            BEST_APP_VERSION* bavp = get_best_app_version(&wu.workunit);
-            if(bavp) {
-                
-                double ewd = estimate_duration(wu.workunit, *bavp);
-                
-                // the job can't be finish before the battery dies
-                if((tewd+ewd > newuptime) && !sreq->host.on_ac_power && !sreq->host.on_usb_power) {
-                    mge_log("[seas_sched] [HOST#%lu] [RESULT#%lu] The device can't finish the job before running out of batteries.\n",
-                        sreq->host.id, wu.resultid);
-                    continue;
-                }else {
-                    mge_log("[seas_sched] [HOST#%lu] [RESULT#%lu] Trying to assing job to device. Estimated job duration: %f seconds. Total job assigned: %f\n",sreq->host.id, wu.resultid, ewd, (tewd+ewd));
-                    if(add_result_to_reply(&wu.workunit, bavp) == 0)
-                        tewd += ewd;
+        double inprogress = time_inprogress(sreq);
+        if(inprogress < newuptime) {
+            for(int i=0; i<nwus; i++) {
+                WU_RESULT wu = wu_results[i];
+                BEST_APP_VERSION* bavp = get_best_app_version(&wu.workunit);
+                if(bavp) {
+                    double ewd = estimate_duration(wu.workunit, *bavp);
+                    // the job can't be finish before the battery dies
+                    if((tewd+ewd+inprogress > newuptime) && !sreq->host.on_ac_power && !sreq->host.on_usb_power) {
+                        mge_log("[seas_sched] [HOST#%lu] [RESULT#%lu] The device can't finish the job before running out of batteries.\n",
+                            sreq->host.id, wu.resultid);
+                        continue;
+                    }else {
+                        mge_log("[seas_sched] [HOST#%lu] [RESULT#%lu] Trying to assing job to device. Estimated job duration: %f seconds. Total job assigned: %f\n",sreq->host.id, wu.resultid, ewd, (tewd+ewd));
+                        if(add_result_to_reply(&wu.workunit, bavp) == 0)
+                            tewd += ewd;
+                    }
                 }
             }
         }
+        else
+        {
+            mge_log("[seas_sched] [HOST#%lu] Host has too much in progress jobs. Not sending new jobs. Total time until finish current jobs: %ld  seconds",sreq->host.id, inprogress);
+        }
+    }
+    else 
+    {
+        mge_log("[seas_sched] [HOST#%lu] Host is about to lost connection because of battery power. Not sending jobs",sreq->host.id);
     }
     
     //we will expect for the next report, twice the total of work sent (it should come before that time)

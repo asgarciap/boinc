@@ -57,7 +57,6 @@
 #include "sched_send.h"
 
 #ifdef BOINCMGE
-#include "sched_mge.h"
 #include "sched_mge_api.h"
 #endif
 

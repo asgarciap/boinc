@@ -43,7 +43,6 @@
 
 #include "sched_check.h"
 #include "sched_config.h"
-#include "sched_mge.h"
 #include "sched_mge_api.h"
 #include "sched_main.h"
 #include "sched_msgs.h"
@@ -63,15 +62,15 @@ void mge_log(const char* format, ...)
     va_end(va);
 }
 
-BEST_APP_VERSION* get_best_app_version(WU_RESULT* wr)
+BEST_APP_VERSION* get_best_app_version(WORKUNIT* wu)
 {
     BEST_APP_VERSION* bavp;
-    bavp = get_app_version(wr->workunit, true, false);
+    bavp = get_app_version(*wu, true, false);
     if (!bavp) {
         if (config.debug_send_job) {
             log_messages.printf(MSG_NORMAL,
-                "[mge_sched] [RESULT#%lu] no app version available\n",
-                wr->resultid
+                "[mge_sched] [WORKUNIT#%lu] no app version available\n",
+                wu->id
             );
         }
     }
