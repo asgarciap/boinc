@@ -15,13 +15,18 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
+#ifndef BOINC_SCHED_MGE_H
+#define BOINC_SCHED_MGE_H
+
 extern void send_work_mge();
 
 //exposed functions to be available in the MGE API
-BEST_APP_VERSION* get_best_app_version(WORKUNIT* wu);
-int estimate_workunit_duration(WU_RESULT* wr, BEST_APP_VERSION* bavp);
-int add_result_to_reply(WORKUNIT* wu, BEST_APP_VERSION* bavp);
-void save_mge_sched_data(HOST&, const char* data, int len);
-const char* get_mge_sched_data(HOST&);
-DEVICE_STATUS get_last_device_status(HOST&);
-void mge_log(const char* format, ...);
+extern BEST_APP_VERSION* get_best_app_version(WORKUNIT* wu);
+extern int estimate_workunit_duration(WU_RESULT* wr, BEST_APP_VERSION* bavp);
+extern int add_result_to_reply(WORKUNIT* wu, BEST_APP_VERSION* bavp);
+extern void save_mge_sched_data(HOST&, const char* data, int len);
+extern const char* get_mge_sched_data(HOST&);
+extern DEVICE_STATUS get_last_device_status(HOST&);
+extern void mge_log(const char* format, ...);
+
+#endif

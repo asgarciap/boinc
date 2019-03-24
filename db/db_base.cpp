@@ -475,7 +475,6 @@ DB_BASE_SPECIAL::DB_BASE_SPECIAL(DB_CONN* p) : db(p) {
 void escape_string(char* field, int len) {
     char buf[MAX_QUERY_LEN];
     char* q = buf, *p = field;
-
     if (len > MAX_QUERY_LEN) {
         len = MAX_QUERY_LEN;
     }

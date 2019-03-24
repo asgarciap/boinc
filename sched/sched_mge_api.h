@@ -15,8 +15,13 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
+#ifndef BOINC_SCHED_MGE_API_H
+#define BOINC_SCHED_MGE_API_H
+
 #include "sched_send.h"
 #include "sched_mge.h"
 
 extern void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus);
 extern void calc_workunit_replicas(SCHEDULER_REQUEST* sreq, WORKUNIT wu, int& reps, int& quorum);
+
+#endif

@@ -46,7 +46,6 @@
 #include "sched_mge_api.h"
 #include "sched_main.h"
 #include "sched_msgs.h"
-#include "sched_send.h"
 #include "sched_shmem.h"
 #include "sched_types.h"
 #include "sched_util.h"
@@ -57,7 +56,7 @@ void mge_log(const char* format, ...)
     char buf[256];
     va_list va;
     va_start(va, format);
-    sprintf(buf, format, va);
+    snprintf(buf, sizeof(buf), format, va);
     log_messages.printf(MSG_NORMAL, "[mge_sched] %s", buf);
     va_end(va);
 }
@@ -179,7 +178,8 @@ DEVICE_STATUS get_last_device_status(HOST& h)
         return d;
     }
     else {
-        d.hostid=h.id;
+        d.clear();
+	d.hostid=h.id;
         d.insert();
     }
     return d;
@@ -296,7 +296,9 @@ void send_work_mge() {
         nr++;
     }
     
-    if(nr > 0) { 
+    if(nr > 0) {
+	if(!g_request->hostid) 
+		g_request->hostid = g_reply->hostid; 
         send_work_host(g_request, sched_results, nr);
         g_wreq->best_app_versions.clear();
     }

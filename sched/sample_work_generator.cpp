@@ -58,7 +58,8 @@
     // maintain at least this many unsent results
 #define REPLICATION_FACTOR  1
     // number of instances of each job
-
+#define DELAY_BOUND 420
+    // max time to wait for a job to finish
 const char* app_name = "example_app";
 const char* in_template_file = "example_app_in";
 const char* out_template_file = "example_app_out";
@@ -99,7 +100,7 @@ int make_job() {
     wu.rsc_fpops_bound = 1e14;
     wu.rsc_memory_bound = 1e8;
     wu.rsc_disk_bound = 1e8;
-    wu.delay_bound = 86400;
+    wu.delay_bound = DELAY_BOUND;
     wu.min_quorum = REPLICATION_FACTOR;
     wu.target_nresults = REPLICATION_FACTOR;
     wu.max_error_results = REPLICATION_FACTOR*4;

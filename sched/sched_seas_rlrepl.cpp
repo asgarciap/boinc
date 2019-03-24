@@ -3,12 +3,13 @@
 
 #include <map>
 
-void decode_sched_data(const char* data, double& avg, int &samples, double& start_time, double &dr, double& nextupdate)
+static inline void decode_sched_data(const char* data, double& avg, int &samples, double& start_time, double &dr, double& nextupdate)
 {
     avg = 0.0;
     samples = 0;
     start_time = time(0);
     dr = 0;
+    nextupdate = time(0)+300;
     std::vector<std::string> vdata = split(data, ';');
     if(vdata.size() >= 5)
     {
@@ -20,7 +21,7 @@ void decode_sched_data(const char* data, double& avg, int &samples, double& star
     }
 }
 
-std::string encode_sched_data(double uptimeavg, int samples, double start_time, double dr, double nextupdate)
+static inline std::string encode_sched_data(double uptimeavg, int samples, double start_time, double dr, double nextupdate)
 {
     std::string mge_data("");
     mge_data.append(std::to_string(uptimeavg)); //avg
@@ -36,7 +37,7 @@ std::string encode_sched_data(double uptimeavg, int samples, double start_time, 
     return mge_data;
 }
 
-double time_inprogress(SCHEDULER_REQUEST* sreq)
+static inline double time_inprogress(SCHEDULER_REQUEST* sreq)
 {
     double total=0.0;
     for(std::size_t i=0; i<sreq->ip_results.size(); i++)
@@ -50,9 +51,11 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
     std::string data(get_mge_sched_data(sreq->host));
     double avg, start_time, dr, nextupdate;
     int samples;
+
     decode_sched_data(data.c_str(),avg,samples,start_time, dr, nextupdate);
     DEVICE_STATUS ds = get_last_device_status(sreq->host);
-    
+
+
     //estimate discharging rate if there were a change in battery charge percentage
     double newcharge = sreq->host.battery_charge_pct;
     double oldcharge = ds.battery_charge_pct;
@@ -60,14 +63,22 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
     double oldtime = ds.last_update_time;
     double delta = 0.0f;
     double uptimeavg = 0.0f;
-    double newuptime = 0.0f;
-    double tewd = 0; //total amount of time or work sent to the device (in seconds)
+    int newuptime = 0;
+    int tewd = 0; //total amount of time or work sent to the device (in seconds)
     
     //if the battery charge didn't change or it has been a "long time" since the last update
     //use the last discharge rate saved
     if(oldcharge > newcharge && newtime <= nextupdate)
         dr = (newtime - oldtime) / (oldcharge-newcharge);
-    
+        
+    //default discharge rate
+    if(dr <= 0)
+	 dr = 1;
+
+    //default start time
+    if(start_time <= 0)
+	 start_time = sreq->host.device_status_time - 300;
+   
     //estimate remain time
     double uptime = newtime - start_time + newcharge*dr;
     
@@ -76,22 +87,25 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
     delta = uptime - uptimeavg;
     uptimeavg += delta/samples;
     newuptime = uptimeavg - (newtime-start_time);
-    
+    mge_log("[seas_sched] [HOST#%ld] Battery Discharge Rate: %.3f%%/sec Estimated Remaining Uptime: %d seconds\n", sreq->hostid, dr, newuptime); 
     if(newuptime > 0) {
-        double inprogress = time_inprogress(sreq);
+        int inprogress = time_inprogress(sreq);
+	mge_log("[seas_sched] [HOST#%ld] Estimated in progress job remaining time: %d seconds\n",sreq->hostid,inprogress);
         if(inprogress < newuptime) {
             for(int i=0; i<nwus; i++) {
-                WU_RESULT wu = wu_results[i];
+                WU_RESULT& wu = wu_results[i];
                 BEST_APP_VERSION* bavp = get_best_app_version(&wu.workunit);
                 if(bavp) {
-                    double ewd = estimate_duration(wu.workunit, *bavp);
+                    int ewd = estimate_duration(wu.workunit, *bavp);
+		    int tot_busy = (int) (tewd+ewd+inprogress);
+		    mge_log("[seas_sched] [RESULT#%ld] Estimated job duration time: %d seconds.\n",wu.resultid,ewd);
                     // the job can't be finish before the battery dies
-                    if((tewd+ewd+inprogress > newuptime) && !sreq->host.on_ac_power && !sreq->host.on_usb_power) {
-                        mge_log("[seas_sched] [HOST#%lu] [RESULT#%lu] The device can't finish the job before running out of batteries.\n",
-                            sreq->host.id, wu.resultid);
+                    if( tot_busy > newuptime && !sreq->host.on_ac_power && !sreq->host.on_usb_power) {
+                        mge_log("[seas_sched] [HOST#%ld] [RESULT#%ld] The device can't finish the job before running out of batteries. Total Time: %d > Available Time: %d\n",
+                            sreq->hostid, wu.resultid,tot_busy,newuptime);
                         continue;
                     }else {
-                        mge_log("[seas_sched] [HOST#%lu] [RESULT#%lu] Trying to assing job to device. Estimated job duration: %f seconds. Total job assigned: %f\n",sreq->host.id, wu.resultid, ewd, (tewd+ewd));
+                        mge_log("[seas_sched] [HOST#%ld] [RESULT#%ld] Trying to assing job to device. Estimated job duration: %f seconds. Total job assigned: %.3f\n",sreq->hostid, wu.resultid, ewd, (tewd+ewd));
                         if(add_result_to_reply(&wu.workunit, bavp) == 0)
                             tewd += ewd;
                     }
@@ -100,12 +114,12 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
         }
         else
         {
-            mge_log("[seas_sched] [HOST#%lu] Host has too much in progress jobs. Not sending new jobs. Total time until finish current jobs: %ld  seconds",sreq->host.id, inprogress);
+            mge_log("[seas_sched] [HOST#%ld] Host has too much in progress jobs. Not sending new jobs. Total time until finish current jobs: %d  seconds\n",sreq->hostid, inprogress);
         }
     }
     else 
     {
-        mge_log("[seas_sched] [HOST#%lu] Host is about to lost connection because of battery power. Not sending jobs",sreq->host.id);
+        mge_log("[seas_sched] [HOST#%ld] Host is about to lost connection because of battery power. Not sending jobs\n",sreq->hostid);
     }
     
     //we will expect for the next report, twice the total of work sent (it should come before that time)

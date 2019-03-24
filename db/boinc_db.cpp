@@ -2939,8 +2939,6 @@ void DB_CONSENT_TYPE::db_parse(MYSQL_ROW &r) {
 }
 
 void DB_DEVICE_STATUS::db_print(char* buf) {
-    ESCAPE(device_name);
-    ESCAPE(mge_sched_data);
     sprintf(buf,
     "host_id=%ld, "
     "last_update_time=%f, "
@@ -2965,8 +2963,6 @@ void DB_DEVICE_STATUS::db_print(char* buf) {
     device_name,
     mge_sched_data
     );
-    UNESCAPE(device_name);
-    UNESCAPE(mge_sched_data);
 }
 
 void DB_DEVICE_STATUS::db_parse(MYSQL_ROW &r) {
