@@ -28,5 +28,4 @@ extern void save_mge_sched_data(HOST&, const char* data, int len);
 extern const char* get_mge_sched_data(HOST&);
 extern DEVICE_STATUS get_last_device_status(HOST&);
 extern void mge_log(const char* format, ...);
-
 #endif

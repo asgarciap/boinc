@@ -16,3 +16,9 @@ alter table device_status add unique(host_id);
 
 alter table device_status
     add index device_host (host_id);
+
+alter table result 
+    add column init_battery_pct double not null default 0,
+    add column init_battery_temp double not null default 0,
+    add column final_battery_pct double not null default 0,
+    add column final_battery_temp double not null default 0;

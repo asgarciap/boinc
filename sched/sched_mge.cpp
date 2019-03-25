@@ -150,7 +150,11 @@ int add_result_to_reply(WORKUNIT* workunit, BEST_APP_VERSION* bavp)
                     SCHED_DB_RESULT result;
                     result.id = wu_result.resultid;
                     if (result_still_sendable(result, wu)) {
-                        return add_result_to_reply(result, wu, bavp, false);
+                        int retadd = add_result_to_reply(result, wu, bavp, false);
+			if(sema_locked) {
+			    unlock_sema();	
+			}
+			return retadd;
 
                         // add_result_to_reply() fails only in pathological cases -
                         // e.g. we couldn't update the DB record or modify XML fields.
@@ -163,7 +167,10 @@ int add_result_to_reply(WORKUNIT* workunit, BEST_APP_VERSION* bavp)
             }
         }
     }
-    
+   
+    if(sema_locked) {
+        unlock_sema();	    
+    } 
     //we could't add the work unit to the reply
     return -1;
 }
@@ -299,10 +306,11 @@ void send_work_mge() {
     if(nr > 0) {
 	if(!g_request->hostid) 
 		g_request->hostid = g_reply->hostid; 
-        send_work_host(g_request, sched_results, nr);
+        log_messages.printf(MSG_NORMAL,"[mge_sched] [HOST#%lu] Invoking MGE scheduler.\n",g_request->hostid);
+	send_work_host(g_request, sched_results, nr);
         g_wreq->best_app_versions.clear();
     }
     else {
-        log_messages.printf(MSG_NORMAL, "[sched_mge] There is no work seandable in the work unit cache");
+        log_messages.printf(MSG_NORMAL, "[mge_sched] There is no work seandable in the work unit cache\n");
     }
 }

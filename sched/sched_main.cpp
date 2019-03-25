@@ -71,7 +71,7 @@
 // Useful for debugging, if your cgi script keeps crashing.  This
 // makes it dump a core file that you can load into a debugger to see
 // where the problem is.
-#define DUMP_CORE_ON_SEGV 0
+#define DUMP_CORE_ON_SEGV 1
 
 #define DEBUG_LEVEL  999
 #define MAX_FCGI_COUNT  20

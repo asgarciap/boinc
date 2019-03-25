@@ -1138,7 +1138,14 @@ void DB_RESULT::db_print(char* buf){
         "app_version_id=%ld, runtime_outlier=%d, size_class=%d, "
         "peak_working_set_size=%.0f, "
         "peak_swap_size=%.0f, "
-        "peak_disk_usage=%.0f ",
+        "peak_disk_usage=%.0f "
+	#if BOINCMGE
+        ",init_battery_pct=%.0f, "
+        "init_battery_temp=%.0f, "
+        "final_battery_pct=%.0f, "
+        "final_battery_temp=%.0f "
+	#endif
+	,
         create_time, workunitid,
         server_state, outcome, client_state,
         hostid, userid,
@@ -1155,6 +1162,12 @@ void DB_RESULT::db_print(char* buf){
         peak_working_set_size,
         peak_swap_size,
         peak_disk_usage
+	#if BOINCMGE
+        ,initial_battery_charge_pct,
+        initial_battery_temp_celcius,
+        final_battery_charge_pct,
+        final_battery_temp_celcius
+	#endif
     );
     UNESCAPE(xml_doc_out);
     UNESCAPE(stderr_out);
@@ -1175,7 +1188,11 @@ void DB_RESULT::db_print_values(char* buf){
         "'%s', '%s', '%s', "
         "%d, %d, %d, "
         "%.15e, %.15e, %.15e, %d, "
-        "%d, %lu, %d, %lu, %d, NOW(), 0, 0, 0, 0, %d, 0, 0, 0)",
+        "%d, %lu, %d, %lu, %d, NOW(), 0, 0, 0, 0, %d, 0, 0, 0"
+	#if BOINCMGE
+	",%.0f,%.0f,%.0f,%.0f"
+	#endif
+	")",
         create_time, workunitid,
         server_state, outcome, client_state,
         hostid, userid,
@@ -1185,6 +1202,10 @@ void DB_RESULT::db_print_values(char* buf){
         batch, file_delete_state, validate_state,
         claimed_credit, granted_credit, opaque, random,
         app_version_num, appid, exit_status, teamid, priority, size_class
+	#if BOINCMGE
+	,initial_battery_charge_pct, initial_battery_temp_celcius,
+	final_battery_charge_pct, final_battery_temp_celcius
+	#endif
     );
     UNESCAPE(xml_doc_out);
     UNESCAPE(stderr_out);

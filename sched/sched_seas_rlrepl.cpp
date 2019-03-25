@@ -1,6 +1,5 @@
 #include "sched_mge_api.h"
 #include "boinc_db.h"
-
 #include <map>
 
 static inline void decode_sched_data(const char* data, double& avg, int &samples, double& start_time, double &dr, double& nextupdate)
@@ -71,9 +70,12 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
     if(oldcharge > newcharge && newtime <= nextupdate)
         dr = (newtime - oldtime) / (oldcharge-newcharge);
         
-    //default discharge rate
+    //default discharge rate. (number of seconds to discharge 1% of battery)
     if(dr <= 0)
-	 dr = 1;
+	 dr = 600;
+
+    //discharge rate (amount of % discharged in 1 second)
+    double drs = 1/dr;
 
     //default start time
     if(start_time <= 0)
@@ -87,10 +89,10 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
     delta = uptime - uptimeavg;
     uptimeavg += delta/samples;
     newuptime = uptimeavg - (newtime-start_time);
-    mge_log("[seas_sched] [HOST#%ld] Battery Discharge Rate: %.3f%%/sec Estimated Remaining Uptime: %d seconds\n", sreq->hostid, dr, newuptime); 
+    log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [HOST#%ld] Battery DR: %.3f%%/secs Remaining Uptime: %d secs Jobs in progress: %ld\n", sreq->hostid, drs, newuptime, sreq->ip_results.size()); 
     if(newuptime > 0) {
         int inprogress = time_inprogress(sreq);
-	mge_log("[seas_sched] [HOST#%ld] Estimated in progress job remaining time: %d seconds\n",sreq->hostid,inprogress);
+	log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [HOST#%ld] Estimated in progress job remaining time: %d seconds\n",sreq->hostid,inprogress);
         if(inprogress < newuptime) {
             for(int i=0; i<nwus; i++) {
                 WU_RESULT& wu = wu_results[i];
@@ -98,28 +100,31 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
                 if(bavp) {
                     int ewd = estimate_duration(wu.workunit, *bavp);
 		    int tot_busy = (int) (tewd+ewd+inprogress);
-		    mge_log("[seas_sched] [RESULT#%ld] Estimated job duration time: %d seconds.\n",wu.resultid,ewd);
+		    log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [RESULT#%ld] Estimated job duration time: %d seconds.\n",wu.resultid,ewd);
                     // the job can't be finish before the battery dies
                     if( tot_busy > newuptime && !sreq->host.on_ac_power && !sreq->host.on_usb_power) {
-                        mge_log("[seas_sched] [HOST#%ld] [RESULT#%ld] The device can't finish the job before running out of batteries. Total Time: %d > Available Time: %d\n",
+                        log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [HOST#%ld] [RESULT#%ld] The device can't finish the job before running out of batteries. Total Time: %d > Available Time: %d\n",
                             sreq->hostid, wu.resultid,tot_busy,newuptime);
                         continue;
                     }else {
-                        mge_log("[seas_sched] [HOST#%ld] [RESULT#%ld] Trying to assing job to device. Estimated job duration: %f seconds. Total job assigned: %.3f\n",sreq->hostid, wu.resultid, ewd, (tewd+ewd));
-                        if(add_result_to_reply(&wu.workunit, bavp) == 0)
+                        log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [HOST#%ld] [RESULT#%ld] Trying to assing job to device. Estimated job duration: %d seconds. Total job assigned: %d\n",sreq->hostid, wu.resultid, ewd, (tewd+ewd));
+			int rr = add_result_to_reply(&wu.workunit,bavp);
+                        if(rr == 0)
                             tewd += ewd;
+			else
+			    log_messages.printf(MSG_WARNING,"[mge_sched] [seas_sched] [HOST#%ld] [RESULT#%ld] Job couldn't be assigned to host. Error: %d\n",sreq->hostid, wu.resultid, rr);   
                     }
                 }
             }
         }
         else
         {
-            mge_log("[seas_sched] [HOST#%ld] Host has too much in progress jobs. Not sending new jobs. Total time until finish current jobs: %d  seconds\n",sreq->hostid, inprogress);
+            log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [HOST#%ld] Host has too much in progress jobs. Not sending new jobs. Total time until finish current jobs: %d  seconds\n",sreq->hostid, inprogress);
         }
     }
     else 
     {
-        mge_log("[seas_sched] [HOST#%ld] Host is about to lost connection because of battery power. Not sending jobs\n",sreq->hostid);
+        log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [HOST#%ld] Host is about to lost connection because of battery power. Not sending jobs\n",sreq->hostid);
     }
     
     //we will expect for the next report, twice the total of work sent (it should come before that time)
