@@ -24,8 +24,8 @@ extern void send_work_mge();
 extern BEST_APP_VERSION* get_best_app_version(WORKUNIT* wu);
 extern int estimate_workunit_duration(WU_RESULT* wr, BEST_APP_VERSION* bavp);
 extern int add_result_to_reply(WORKUNIT* wu, BEST_APP_VERSION* bavp);
-extern void save_mge_sched_data(HOST&, const char* data, int len);
-extern const char* get_mge_sched_data(HOST&);
-extern DEVICE_STATUS get_last_device_status(HOST&);
+extern void save_mge_sched_data(long hostid, const char* data, int len);
+extern std::string get_mge_sched_data(long hostid);
+extern DEVICE_STATUS get_last_device_status(long hostid);
 extern void mge_log(const char* format, ...);
 #endif

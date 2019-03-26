@@ -54,11 +54,11 @@
 #include "sched_util.h"
 #include "sched_msgs.h"
 
-#define CUSHION 10
+#define CUSHION 50
     // maintain at least this many unsent results
 #define REPLICATION_FACTOR  1
     // number of instances of each job
-#define DELAY_BOUND 420
+#define DELAY_BOUND 1200
     // max time to wait for a job to finish
 const char* app_name = "example_app";
 const char* in_template_file = "example_app_in";

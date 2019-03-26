@@ -84,7 +84,7 @@ int estimate_workunit_duration(WORKUNIT* wu, BEST_APP_VERSION* bavp)
 int add_result_to_reply(WORKUNIT* workunit, BEST_APP_VERSION* bavp)
 {
     bool sema_locked = false;
-    
+    int retadd = 0;    
     for (int i=0; i<ssp->max_wu_results; i++) {
         WU_RESULT& wu_result = ssp->wu_results[i];
         if(wu_result.workunit.id == workunit->id) {
@@ -113,6 +113,8 @@ int add_result_to_reply(WORKUNIT* workunit, BEST_APP_VERSION* bavp)
             );
 
             if (retval) {
+		log_messages.printf(MSG_WARNING,"[mge_sched][RESULT#%lu] Job can't be send to the host. %s\n",wu_result.resultid, infeasible_string(retval));
+		retadd = retval;
                 continue;
             }
                         
@@ -150,7 +152,7 @@ int add_result_to_reply(WORKUNIT* workunit, BEST_APP_VERSION* bavp)
                     SCHED_DB_RESULT result;
                     result.id = wu_result.resultid;
                     if (result_still_sendable(result, wu)) {
-                        int retadd = add_result_to_reply(result, wu, bavp, false);
+                        retadd = add_result_to_reply(result, wu, bavp, false);
 			if(sema_locked) {
 			    unlock_sema();	
 			}
@@ -172,48 +174,51 @@ int add_result_to_reply(WORKUNIT* workunit, BEST_APP_VERSION* bavp)
         unlock_sema();	    
     } 
     //we could't add the work unit to the reply
-    return -1;
+    return retadd;
 }
 
-DEVICE_STATUS get_last_device_status(HOST& h)
+DEVICE_STATUS get_last_device_status(long hostid)
 {
     DB_DEVICE_STATUS d;
     char buf[256];
-    sprintf(buf, "where host_id=%lu", h.id);
+    sprintf(buf, "where host_id=%lu", hostid);
     if (!d.enumerate(buf)) {
         d.end_enumerate();
         return d;
     }
     else {
         d.clear();
-	d.hostid=h.id;
+	d.hostid=hostid;
         d.insert();
     }
     return d;
 }
 
-const char* get_mge_sched_data(HOST& h)
+std::string get_mge_sched_data(long hostid)
 {   
     char buf[256];
     DB_DEVICE_STATUS ds;
-    sprintf(buf, "where host_id=%lu", h.id);
+    sprintf(buf, "where host_id=%ld", hostid);
     if (!ds.enumerate(buf)) {
         ds.end_enumerate();
-        std::string s(ds.mge_sched_data);
-        return r_base64_decode(s.data(), s.size()).c_str();
+	std::string s(ds.mge_sched_data);
+	std::string sd = r_base64_decode(s.c_str(), s.size()).c_str();
+	log_messages.printf(MSG_NORMAL,"Getting mge_sched_data. base64: %s - decoded: %s\n",ds.mge_sched_data,sd.c_str());
+	return sd;
     }
+    log_messages.printf(MSG_NORMAL,"Getting mge_sched_data. No record found for host_id:%ld\n",hostid);
     return "";
 }
 
-void save_mge_sched_data(HOST& h, const char* data, int len)
+void save_mge_sched_data(long hostid, const char* data, int len)
 {
-    if(h.id != g_reply->host.id) return;
-    
     std::string mgedata64 = r_base64_encode(data, len);
-    
+
+    log_messages.printf(MSG_NORMAL,"Updating mge_sched_data: %s base64: %s hostid: %ld\n",data,mgedata64.c_str(),hostid);
+
     //changing g_reply will cause an update in BD
     //this data is not send to the client since is not writen in g_reply.write method.
-    strlcpy(g_reply->host.mge_sched_data, mgedata64.data(), sizeof(g_reply->host.mge_sched_data));
+    strlcpy(g_reply->host.mge_sched_data, mgedata64.c_str(), sizeof(g_reply->host.mge_sched_data));
     g_reply->host.battery_charge_pct = g_request->host.battery_charge_pct;
     g_reply->host.battery_state = g_request->host.battery_state;
     g_reply->host.battery_temperature_celsius = g_request->host.battery_temperature_celsius;
@@ -224,9 +229,9 @@ void save_mge_sched_data(HOST& h, const char* data, int len)
     g_reply->host.device_status_time = time(NULL);
     
     DB_DEVICE_STATUS d;
-    d.hostid=h.id;
+    d.hostid=hostid;
     char buf[100];
-    sprintf(buf, "where host_id=%lu", h.id);
+    sprintf(buf, "where host_id=%lu", hostid);
     if (d.enumerate(buf)) 
     {
         d.end_enumerate();
@@ -234,7 +239,7 @@ void save_mge_sched_data(HOST& h, const char* data, int len)
         if(retval) 
         {
             log_messages.printf(MSG_CRITICAL,"[mge_sched] [HOST#%lu] Error when trying to insert device_status record. %s\n",
-                            h.id,boincerror(retval));
+                            hostid,boincerror(retval));
         }
     }
 }
