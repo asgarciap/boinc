@@ -306,7 +306,10 @@ int handle_results() {
         srip->peak_working_set_size = rp->peak_working_set_size;
         srip->peak_swap_size = rp->peak_swap_size;
         srip->peak_disk_usage = rp->peak_disk_usage;
-
+        #if BOINCMGE
+        srip->final_battery_charge_pct = g_request->host.battery_charge_pct;
+        srip->final_battery_temp_celsius = g_request->host.battery_temperature_celsius;
+        #endif
         // elapsed time is used to compute credit.
         // do various sanity checks on it.
 

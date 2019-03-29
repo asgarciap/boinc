@@ -670,9 +670,9 @@ struct RESULT {
     //the following only when we have boinc-mge enabled
     #ifdef BOINCMGE
     double initial_battery_charge_pct;
-    double initial_battery_temp_celcius;
+    double initial_battery_temp_celsius;
     double final_battery_charge_pct;
-    double final_battery_temp_celcius;
+    double final_battery_temp_celsius;
     #endif
     void clear();
     RESULT() {clear();}

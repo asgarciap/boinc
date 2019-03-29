@@ -10,8 +10,9 @@ static inline void decode_sched_data(std::string data, double& avg, int &samples
     start_time = time(0);
     dr = 0;
     nextupdate = time(0)+300;
-    lastupdate = time(0)-300;
-    lastcharge = 100.00;
+    lastupdate = 0;
+    lastcharge = -1;
+    if(!data.size()) return;
     std::vector<std::string> vdata = split(data, ';');
     if(vdata.size() >= 7)
     {
@@ -70,22 +71,41 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
     int samples;
     bool updatemge = true;
     decode_sched_data(data,uptimeavg,samples,start_time, dr, nextupdate, lastcharge, lastupdate);
-    DEVICE_STATUS ds = get_last_device_status(sreq->hostid);
 
+    //if it had been more than 6 hours since the last measure, start over again
+    if(time(0) - lastupdate > 21600.0f) {
+        log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] It had been more than 12 hours since last measure. Resetting battery info data\n");
+        lastupdate = sreq->host.device_status_time - 300;
+        if(sreq->host.battery_charge_pct > 5.0f)
+            lastcharge = sreq->host.battery_charge_pct + 5.0f;
+        else
+            lastcharge = 0.0f;
+        start_time = lastupdate;
+        uptimeavg = 0;
+        samples = 0;
+    }
+
+    DEVICE_STATUS ds = get_last_device_status(sreq->hostid);
 
     //estimate discharging rate if there were a change in battery charge percentage
     double newcharge = sreq->host.battery_charge_pct;
     double oldcharge = ds.battery_charge_pct;
     double newtime = sreq->host.device_status_time;
     double oldtime = ds.last_update_time;
+
     //we should calculate only when there is a change in the battery charge state
     if(isNearlyEqual(oldcharge,newcharge)) {
 	    if(!isNearlyEqual(newcharge,lastcharge))
 	    	oldcharge = lastcharge;
 	    else
-		updatemge = false; // if the battery charge is the same we have saved, dont update it
+		    updatemge = false; // if the battery charge is the same we have saved, dont update it
 	    oldtime = lastupdate;
+    }else if(time(0) - oldtime > 21600.0f)
+    {
+        oldtime = lastupdate;
+        oldcharge = lastcharge;
     }
+
     double delta = 0.0f;
     int newuptime = 0;
     int tewd = 0; //total amount of time or work sent to the device (in seconds)
@@ -99,14 +119,14 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
         
     //default discharge rate. (number of seconds to discharge 1% of battery)
     if(dr <= 0)
-	 dr = 600;
+	    dr = 600;
 
     //discharge rate (amount of % discharged in 1 second)
     double drs = 1/dr;
 
     //default start time
     if(start_time <= 0)
-	 start_time = sreq->host.device_status_time - 300;
+	    start_time = sreq->host.device_status_time - 300;
    
     //estimate remain time
     double uptime = newtime - start_time + newcharge*dr;
@@ -129,12 +149,12 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
                 BEST_APP_VERSION* bavp = get_best_app_version(&wu.workunit);
                 if(bavp) {
                     int ewd = estimate_duration(wu.workunit, *bavp);
-		    //other_results is the numbers of results that the client has from this project
-		    //we dont know how much time it will take to complete each of them, so we asume
-		    //they have a 0% of advance
-		    int ewop = ewd*sreq->other_results.size();
-		    int tot_busy = (int) (tewd+ewd+inprogress+ewop);
-		    log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [RESULT#%ld] Estimated job duration time: %d seconds.\n",wu.resultid,ewd);
+                    //other_results is the numbers of results that the client has from this project
+                    //we dont know how much time it will take to complete each of them, so we asume
+                    //they have a 0% of advance
+                    int ewop = ewd*sreq->other_results.size();
+                    int tot_busy = (int) (tewd+ewd+inprogress+ewop);
+                    log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [RESULT#%ld] Estimated job duration time: %d seconds.\n",wu.resultid,ewd);
                     // the job can't be finish before the battery dies
                     if( tot_busy > newuptime && !sreq->host.on_ac_power && !sreq->host.on_usb_power) {
                         log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [HOST#%ld] [RESULT#%ld] The device can't finish the job before running out of batteries. Total Time: %d > Available Time: %d\n",
@@ -179,6 +199,8 @@ void calc_workunit_replicas(SCHEDULER_REQUEST* sreq, WORKUNIT wu, int& reps, int
 {
     //always use quorum=1
     quorum = 1;
+    log_messages.printf(MSG_NORMAL,"[mge_sched] [rlrepl_sched] [WORKUNIT#%ld] Checking number of replicas to generate\n",wu.id);
+
     int K_FACTOR=10;
     int K_WASTED_ENERGY_IMPACT = 7;
     double EXPLORATIVE_PROB = 0.2; //20% of the times we use an explorative strategy
@@ -193,12 +215,16 @@ void calc_workunit_replicas(SCHEDULER_REQUEST* sreq, WORKUNIT wu, int& reps, int
     DB_WORKUNIT dbwu;
     char where[256];
     std::map<int,double> repl_reward;
-   
+
+    //we will generate replicas from 1 to 10 only, thats why we only check for pasts workunits
+    //with replicas within this range i=[1...10]   
     BEST_APP_VERSION* bavp = get_best_app_version(&wu);
-    double estimate_wu_duration = estimate_duration(wu, *bavp);
+    double estimate_wu_duration = 600.0f; //default base duration (10 minutes)
+    if(bavp)
+        estimate_wu_duration = estimate_duration(wu, *bavp);
     int max_repls = 0;
     for(int i=1; i <= 10; ++i) {
-        sprintf(where, "where target_nresults=%d and id <> %lu order by create_time desc", i, wu.id);
+        sprintf(where, "where target_nresults=%d and (assimilate_state <> 0 or error_mask <> 0) and id <> %lu order by create_time desc", i, wu.id);
         if (!dbwu.enumerate(where)) {
             max_repls = i;
             int delay_bound = dbwu.delay_bound;
@@ -218,7 +244,9 @@ void calc_workunit_replicas(SCHEDULER_REQUEST* sreq, WORKUNIT wu, int& reps, int
                     break;
                 }
                 
-                //we need
+                //we need to know how much time did it take to complete the replica
+                //if the roundtrip time is less that twice the delay_bound, then this is
+                //a good replica and the worunit met the QoS quota
                 int roundtrip_time = r.received_time - r.sent_time;
                 if(roundtrip_time > 0 && roundtrip_time <= 2*delay_bound) found_good_replica = true;
                 
@@ -247,17 +275,25 @@ void calc_workunit_replicas(SCHEDULER_REQUEST* sreq, WORKUNIT wu, int& reps, int
                 repl_reward[i] = -K_FACTOR;
             }
             r.end_enumerate();
+	    log_messages.printf(MSG_NORMAL,"[mge_sched] [rlrepl_sched] Reward for using %d replicas: %.3f\n",i,repl_reward[i]);
         }else {
             break;
         }
     }
-    
+   
+    //at this point we have the total wasted energy for every number of replicas
+    //generated in the past (from 1..10 max), now we have to select the number
+    //of replicas to generate for the current workunit
+    //we user two approachs, an explorative one, which selects a number of replicas
+    //randomly and the exploitative one, which selects the number of replicas
+    //that wasted less energy in the past. 
     double val = (double) rand()/RAND_MAX;
     
     if(val < EXPLORATIVE_PROB) {
         //choose a random number between 1 and max_repls
-        reps = (rand() % max_repls)+1;
-    }else {
+        reps = (rand() % max_repls+1)+1;
+	    log_messages.printf(MSG_NORMAL,"[mge_sched] [rlrepl_sched] Using explorative approach. Number of replicas: %d\n",reps);
+    }else if(repl_reward.size() > 0){
         // sort repl_reward and take the one with the higher reward (exploitative)
         reps = 1;
         double v = 0;
@@ -267,5 +303,10 @@ void calc_workunit_replicas(SCHEDULER_REQUEST* sreq, WORKUNIT wu, int& reps, int
                 reps = it->first;
             }
         }
+	    log_messages.printf(MSG_NORMAL,"[mge_sched] [rlrepl_sched] Using exploitative approach. Number of replicas: %d\n",reps);
+    }else {
+	    //if we dont have any data yet, generate only 1 replica
+	    reps = 1;
+	    log_messages.printf(MSG_NORMAL,"[mge_sched] [rlrepl_sched] No data available yet to check. Starting with 1 replica\n");
     }
 }

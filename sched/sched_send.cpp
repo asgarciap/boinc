@@ -897,6 +897,10 @@ int add_result_to_reply(
     result.report_deadline = result.sent_time + wu.delay_bound;
     result.flops_estimate = bavp->host_usage.peak_flops;
     result.app_version_id = get_app_version_id(bavp);
+    #if BOINCMGE
+    result.initial_battery_charge_pct = g_request->host.battery_charge_pct;
+    result.initial_battery_temp_celsius = g_request->host.battery_temperature_celsius;
+    #endif
 
     // update WU DB record.
     // This can fail in normal operation

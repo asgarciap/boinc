@@ -180,15 +180,15 @@ int add_result_to_reply(WORKUNIT* workunit, BEST_APP_VERSION* bavp)
 DEVICE_STATUS get_last_device_status(long hostid)
 {
     DB_DEVICE_STATUS d;
-    char buf[256];
-    sprintf(buf, "where host_id=%lu", hostid);
+    char buf[256] = {0};
+    snprintf(buf, sizeof(buf), "where host_id=%lu", hostid);
     if (!d.enumerate(buf)) {
         d.end_enumerate();
         return d;
     }
     else {
         d.clear();
-	d.hostid=hostid;
+	    d.hostid=hostid;
         d.insert();
     }
     return d;
@@ -196,15 +196,15 @@ DEVICE_STATUS get_last_device_status(long hostid)
 
 std::string get_mge_sched_data(long hostid)
 {   
-    char buf[256];
+    char buf[256] = {0};
     DB_DEVICE_STATUS ds;
-    sprintf(buf, "where host_id=%ld", hostid);
+    snprintf(buf, sizeof(buf), "where host_id=%ld", hostid);
     if (!ds.enumerate(buf)) {
         ds.end_enumerate();
-	std::string s(ds.mge_sched_data);
-	std::string sd = r_base64_decode(s.c_str(), s.size()).c_str();
-	log_messages.printf(MSG_NORMAL,"Getting mge_sched_data. base64: %s - decoded: %s\n",ds.mge_sched_data,sd.c_str());
-	return sd;
+        std::string s(ds.mge_sched_data);
+        std::string sd = r_base64_decode(s.c_str(), s.size()).c_str();
+        log_messages.printf(MSG_NORMAL,"Getting mge_sched_data. base64: %s - decoded: %s\n",ds.mge_sched_data,sd.c_str());
+        return sd;
     }
     log_messages.printf(MSG_NORMAL,"Getting mge_sched_data. No record found for host_id:%ld\n",hostid);
     return "";
@@ -234,7 +234,6 @@ void save_mge_sched_data(long hostid, const char* data, int len)
     sprintf(buf, "where host_id=%lu", hostid);
     if (d.enumerate(buf)) 
     {
-        d.end_enumerate();
         int retval = d.insert();
         if(retval) 
         {
@@ -242,6 +241,7 @@ void save_mge_sched_data(long hostid, const char* data, int len)
                             hostid,boincerror(retval));
         }
     }
+    d.end_enumerate();
 }
 
 

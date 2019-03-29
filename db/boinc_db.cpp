@@ -1164,9 +1164,9 @@ void DB_RESULT::db_print(char* buf){
         peak_disk_usage
 	#if BOINCMGE
         ,initial_battery_charge_pct,
-        initial_battery_temp_celcius,
+        initial_battery_temp_celsius,
         final_battery_charge_pct,
-        final_battery_temp_celcius
+        final_battery_temp_celsius
 	#endif
     );
     UNESCAPE(xml_doc_out);
@@ -1203,8 +1203,8 @@ void DB_RESULT::db_print_values(char* buf){
         claimed_credit, granted_credit, opaque, random,
         app_version_num, appid, exit_status, teamid, priority, size_class
 	#if BOINCMGE
-	,initial_battery_charge_pct, initial_battery_temp_celcius,
-	final_battery_charge_pct, final_battery_temp_celcius
+	,initial_battery_charge_pct, initial_battery_temp_celsius,
+	final_battery_charge_pct, final_battery_temp_celsius
 	#endif
     );
     UNESCAPE(xml_doc_out);
@@ -1218,9 +1218,15 @@ void DB_RESULT::db_print_values(char* buf){
 int DB_RESULT::mark_as_sent(int old_server_state, int report_grace_period) {
     char query[MAX_QUERY_LEN];
     int retval;
+    
+    char extraq[255];
+    extraq[0]=0;
+    #if BOINCMGE
+    sprintf(extraq, ", init_battery_pct=%.3f, init_battery_temp=%.3f",initial_battery_charge_pct,initial_battery_temp_celsius);
+    #endif
 
     sprintf(query,
-        "update result set server_state=%d, hostid=%lu, userid=%lu, sent_time=%d, report_deadline=%d, flops_estimate=%.15e, app_version_id=%ld  where id=%lu and server_state=%d",
+        "update result set server_state=%d, hostid=%lu, userid=%lu, sent_time=%d, report_deadline=%d, flops_estimate=%.15e, app_version_id=%ld  %s where id=%lu and server_state=%d",
         server_state,
         hostid,
         userid,
@@ -1228,6 +1234,7 @@ int DB_RESULT::mark_as_sent(int old_server_state, int report_grace_period) {
         report_deadline + report_grace_period,
         flops_estimate,
         app_version_id,
+	extraq,
         id,
         old_server_state
     );
@@ -1279,9 +1286,9 @@ void DB_RESULT::db_parse(MYSQL_ROW &r) {
     peak_disk_usage = atof(r[i++]);
 #if BOINCMGE
     initial_battery_charge_pct = atof(r[i++]);
-    initial_battery_temp_celcius = atof(r[i++]);
+    initial_battery_temp_celsius = atof(r[i++]);
     final_battery_charge_pct = atof(r[i++]);
-    final_battery_temp_celcius = atof(r[i++]);
+    final_battery_temp_celsius = atof(r[i++]);
 #endif
 }
 
@@ -2420,6 +2427,10 @@ int DB_SCHED_RESULT_ITEM_SET::update_result(SCHED_RESULT_ITEM& ri) {
         "    peak_working_set_size=%.0f, "
         "    peak_swap_size=%.0f, "
         "    peak_disk_usage=%.0f "
+        #if BOINCMGE
+	"    , final_battery_pct=%.3f, "
+	"    final_battery_temp=%.3f "
+        #endif
         "WHERE "
         "    id=%lu",
         ri.hostid,
@@ -2438,6 +2449,10 @@ int DB_SCHED_RESULT_ITEM_SET::update_result(SCHED_RESULT_ITEM& ri) {
         ri.peak_working_set_size,
         ri.peak_swap_size,
         ri.peak_disk_usage,
+        #if BOINCMGE
+	ri.final_battery_charge_pct,
+	ri.final_battery_temp_celsius,
+        #endif
         ri.id
     );
     retval = db->do_query(query);
