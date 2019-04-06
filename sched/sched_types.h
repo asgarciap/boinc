@@ -218,7 +218,12 @@ struct GLOBAL_PREFS {
     double ram_max_used_busy_frac;
     double ram_max_used_idle_frac;
     double max_ncpus_pct;
-
+    
+    #ifdef BOINCMGE
+    bool boincmge_scheduler_enabled;
+    double battery_charge_min_pct;
+    double battery_max_temperature;
+    #endif
     void parse(const char* buf, const char* venue);
     void defaults();
     inline double work_buf_min() {return work_buf_min_days*86400;}
@@ -346,8 +351,6 @@ struct SCHEDULER_REQUEST {
     USER_KEYWORDS user_keywords;
     int user_id;
 
-    bool use_mge_scheduler;
-    
     SCHEDULER_REQUEST();
     ~SCHEDULER_REQUEST(){};
     void clear();

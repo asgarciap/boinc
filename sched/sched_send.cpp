@@ -1679,7 +1679,8 @@ void send_work() {
     }
 
     #ifdef BOINCMGE
-    if (config.mge_scheduling && g_request->use_mge_scheduler) {
+    log_messages.printf(MSG_NORMAL, "[mge_sched] mge working global prefs. mge_sched_enabled: %d battery_charge_min_pct: %.3f\n",g_request->global_prefs.boincmge_scheduler_enabled, g_request->global_prefs.battery_charge_min_pct);
+    if (config.mge_scheduling && g_request->global_prefs.boincmge_scheduler_enabled) {
         log_messages.printf(MSG_NORMAL,
                     "[mge_sched] using mobile grid extension scheduling as requested by client.\n"
                 );

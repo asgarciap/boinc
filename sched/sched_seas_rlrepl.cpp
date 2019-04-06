@@ -129,14 +129,17 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
 	    start_time = sreq->host.device_status_time - 300;
    
     //estimate remain time
-    double uptime = newtime - start_time + newcharge*dr;
+    double availablecharge = newcharge - sreq->global_prefs.battery_charge_min_pct;
+    double uptime = 0.f;
+    if(availablecharge > 0.f)
+        uptime = newtime - start_time + availablecharge*dr;
     
     //update average remain time
     samples++;
     delta = uptime - uptimeavg;
     uptimeavg += delta/samples;
     newuptime = uptimeavg - (newtime-start_time);
-    log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [HOST#%ld] Battery DR: %.3f%%/secs Remaining Uptime: %d secs Jobs in progress: %ld\n", sreq->hostid, drs, newuptime, (sreq->ip_results.size()+sreq->other_results.size())); 
+    log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [HOST#%ld] Battery DR: %.3f%%/secs, Available Battery Pct: %.3f%%  Remaining Uptime: %d secs Jobs in progress: %ld\n", sreq->hostid, drs, availablecharge, newuptime, (sreq->ip_results.size()+sreq->other_results.size())); 
     log_messages.printf(MSG_NORMAL,"[sched_seas] data_calculated - avg:%.3f samples:%d start_time:%.0f dr:%.3f nextupdate:%.0f\n",uptimeavg,samples,start_time,dr,nextupdate);
     if(newuptime > 0) {
 	//total time to complete jobs from others projects

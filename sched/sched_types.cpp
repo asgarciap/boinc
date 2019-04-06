@@ -277,7 +277,6 @@ void SCHEDULER_REQUEST::clear() {
     using_weak_auth = false;
     last_rpc_dayofyear = 0;
     current_rpc_dayofyear = 0;
-    use_mge_scheduler = false;
 }
 
 // return an error message or NULL
@@ -552,8 +551,6 @@ const char* SCHEDULER_REQUEST::parse(XML_PARSER& xp) {
         }
         if (xp.parse_str("client_brand", client_brand, sizeof(client_brand))) continue;
 
-        if(xp.parse_bool("use_mge_scheduler", use_mge_scheduler)) continue;
-        
         // unused or deprecated stuff follows
 
         if (xp.match_tag("active_task_set")) continue;
@@ -1554,6 +1551,14 @@ void GLOBAL_PREFS::parse(const char* buf, const char* venue) {
         ram_max_used_idle_frac = dtemp/100.;
     }
     parse_double(buf2, "<max_ncpus_pct>", max_ncpus_pct);
+
+    #ifdef BOINCMGE
+    int tempint = 0;
+    parse_double(buf2, "<battery_charge_min_pct>", battery_charge_min_pct);
+    parse_double(buf2, "<battery_max_temperature>", battery_max_temperature);
+    parse_int(buf2, "<boincmge_scheduler_enabled>", tempint);
+    boincmge_scheduler_enabled = tempint;
+    #endif
 }
 
 void GLOBAL_PREFS::defaults() {
