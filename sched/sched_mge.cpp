@@ -81,6 +81,11 @@ int estimate_workunit_duration(WORKUNIT* wu, BEST_APP_VERSION* bavp)
     return estimate_duration(*wu,*bavp);
 }
 
+double avg_turnaround_time()
+{
+    return g_reply->host.avg_turnaround;
+}
+
 int add_result_to_reply(WORKUNIT* workunit, BEST_APP_VERSION* bavp)
 {
     bool sema_locked = false;
@@ -312,7 +317,7 @@ void send_work_mge() {
 	if(!g_request->hostid) 
 		g_request->hostid = g_reply->hostid; 
         log_messages.printf(MSG_NORMAL,"[mge_sched] [HOST#%lu] Invoking MGE scheduler.\n",g_request->hostid);
-	send_work_host(g_request, sched_results, nr);
+        send_work_host(g_request, sched_results, nr);
         g_wreq->best_app_versions.clear();
     }
     else {

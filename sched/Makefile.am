@@ -150,7 +150,10 @@ noinst_HEADERS = \
     sched_send.h \
     sched_shmem.h \
     sched_version.h \
-    sched_types.h
+    sched_types.h \
+    sched_mge.h \
+    sched_mge_api.h
+
 
 EXTRA_DIST = \
     start

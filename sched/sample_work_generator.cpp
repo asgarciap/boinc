@@ -60,6 +60,12 @@
     // number of instances of each job
 #define DELAY_BOUND 1200
     // max time to wait for a job to finish
+
+#define TOTAL_JOBS_TO_COMPLETE 150
+    //number of jobs to be completed
+
+#define UNLIMITED_JOBS 0
+
 const char* app_name = "example_app";
 const char* in_template_file = "example_app_in";
 const char* out_template_file = "example_app_out";
@@ -128,6 +134,14 @@ void main_loop() {
     while (1) {
         check_stop_daemons();
         long n;
+        long jobs_fin=0;
+        if(!UNLIMITED_JOBS) {        
+            char query[1024];
+            sprintf(query, "where server_state<=%d or outcome=%d ", RESULT_SERVER_STATE_IN_PROGRESS,RESULT_OUTCOME_SUCCESS);
+            retval = count_results(query, jobs_fin);
+            if(jobs_fin >= TOTAL_JOBS_TO_COMPLETE)
+               goto leave;
+        }
         retval = count_unsent_results(n, app.id);
         if (retval) {
             log_messages.printf(MSG_CRITICAL,
@@ -138,7 +152,10 @@ void main_loop() {
         if (n > CUSHION) {
             daemon_sleep(10);
         } else {
-            int njobs = (CUSHION-n)/REPLICATION_FACTOR;
+            int njobs = (CUSHION-n)/REPLICATION_FACTOR;           
+            if(njobs+jobs_fin > TOTAL_JOBS_TO_COMPLETE && !UNLIMITED_JOBS)
+                njobs = TOTAL_JOBS_TO_COMPLETE - jobs_fin;
+
             log_messages.printf(MSG_DEBUG,
                 "Making %d jobs\n", njobs
             );
@@ -169,6 +186,7 @@ void main_loop() {
                 if (x > now) break;
             }
         }
+leave: daemon_sleep(5);
     }
 }
 

@@ -50,6 +50,7 @@ inline DB_ID_TYPE generalized_app_version_id(
     return avid;
 }
 
+extern int count_results(char* query, long& n);
 extern int count_workunits(long&, const char* query);
 extern int count_unsent_results(long&, DB_ID_TYPE appid, int size_class=-1);
 extern int restrict_wu_to_user(WORKUNIT& wu, DB_ID_TYPE userid);
