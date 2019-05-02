@@ -3,30 +3,28 @@
 #include <map>
 #include <cmath>
 
-static inline void decode_sched_data(std::string data, double& avg, int &samples, double& start_time, double &dr, double& nextupdate, double& lastcharge, double& lastupdate)
+static inline void decode_sched_data(std::string data, double& avg, int &samples, double& start_time, double &dr, double& lastcharge, double& lastupdate)
 {
     avg = 0.0;
     samples = 0;
-    start_time = time(0);
+    start_time = 0.0f;
     dr = 0;
-    nextupdate = time(0)+300;
     lastupdate = 0;
     lastcharge = -1;
     if(!data.size()) return;
     std::vector<std::string> vdata = split(data, ';');
-    if(vdata.size() >= 7)
+    if(vdata.size() >= 6)
     {
         avg = atof(vdata[0].c_str());
         samples = atoi(vdata[1].c_str());
         start_time = atof(vdata[2].c_str());
         dr = atof(vdata[3].c_str());
-        nextupdate = atof(vdata[4].c_str());
-        lastcharge = atof(vdata[5].c_str());
-        lastupdate = atof(vdata[6].c_str());
+        lastcharge = atof(vdata[4].c_str());
+        lastupdate = atof(vdata[5].c_str());
     }
 }
 
-static inline std::string encode_sched_data(double uptimeavg, int samples, double start_time, double dr, double nextupdate, double lastcharge, double lastupdate)
+static inline std::string encode_sched_data(double uptimeavg, int samples, double start_time, double dr, double lastcharge, double lastupdate)
 {
     std::string mge_data("");
     mge_data.append(std::to_string(uptimeavg)); //avg
@@ -36,8 +34,6 @@ static inline std::string encode_sched_data(double uptimeavg, int samples, doubl
     mge_data.append(std::to_string(start_time)); //start time
     mge_data.append(";");
     mge_data.append(std::to_string(dr)); //discharge rate (seconds)
-    mge_data.append(";");
-    mge_data.append(std::to_string(nextupdate));
     mge_data.append(";");
     mge_data.append(std::to_string(lastcharge));
     mge_data.append(";");
@@ -57,7 +53,7 @@ static inline double time_inprogress_op(SCHEDULER_REQUEST* sreq)
 
 static inline bool isNearlyEqual(double x, double y)
 {
-    const double epsilon = 0.0001f;
+    const double epsilon = 0.001f;
     return std::abs(x-y) <= epsilon*std::abs(x);
 }
 
@@ -67,54 +63,44 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
     //get current data	
     std::string data = get_mge_sched_data(sreq->hostid);
 
-    double uptimeavg, start_time, dr, nextupdate, lastcharge, lastupdate;
+    double uptimeavg, start_time, dr, lastcharge, lastupdate;
     int samples;
     bool updatemge = true;
-    decode_sched_data(data,uptimeavg,samples,start_time, dr, nextupdate, lastcharge, lastupdate);
-
+    decode_sched_data(data,uptimeavg,samples,start_time, dr, lastcharge, lastupdate);
+    double origlastupdate = 0.0f;
     //if it had been more than 6 hours since the last measure, start over again
-    if(time(0) - lastupdate > 21600.0f) {
-        log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] It had been more than 12 hours since last measure. Resetting battery info data\n");
-        lastupdate = sreq->host.device_status_time - 300;
-        if(sreq->host.battery_charge_pct > 5.0f)
-            lastcharge = sreq->host.battery_charge_pct + 5.0f;
-        else
-            lastcharge = 0.0f;
+    if(time(0) - lastupdate > 21600.0f) 
+    {
+        log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] It had been more than 6 hours since last measure. Resetting battery info data\n");
+        origlastupdate = lastupdate;
+        lastupdate = sreq->host.device_status_time;
+        lastcharge = sreq->host.battery_charge_pct;
         start_time = lastupdate;
         uptimeavg = 0;
         samples = 0;
     }
 
     DEVICE_STATUS ds = get_last_device_status(sreq->hostid);
-
+    (void) ds; //avoid unused var warnning
     //estimate discharging rate if there were a change in battery charge percentage
     double newcharge = sreq->host.battery_charge_pct;
-    double oldcharge = ds.battery_charge_pct;
+    double oldcharge = lastcharge;
     double newtime = sreq->host.device_status_time;
-    double oldtime = ds.last_update_time;
+    double oldtime = lastupdate;
 
     //we should calculate only when there is a change in the battery charge state
-    if(isNearlyEqual(oldcharge,newcharge)) {
-	    if(!isNearlyEqual(newcharge,lastcharge))
-	    	oldcharge = lastcharge;
-	    else
-		    updatemge = false; // if the battery charge is the same we have saved, dont update it
-	    oldtime = lastupdate;
-    }else if(time(0) - oldtime > 21600.0f)
-    {
-        oldtime = lastupdate;
-        oldcharge = lastcharge;
-    }
+    if(isNearlyEqual(oldcharge,newcharge) && origlastupdate > 0.0f) 
+		updatemge = false; // if the battery charge is the same we have saved, dont update it
 
     double delta = 0.0f;
     int newuptime = 0;
     int tewd = 0; //total amount of time or work sent to the device (in seconds)
     
-    log_messages.printf(MSG_NORMAL,"[sched_seas] data_decoded - avg:%.3f samples:%d start_time:%.0f dr:%.3f nextupdate:%.0f lastupdate:%.0f currupdate:%.0f lastcharge:%.3f newcharge:%.3f\n",uptimeavg,samples,start_time,dr,nextupdate,oldtime,newtime,oldcharge,newcharge);
+    log_messages.printf(MSG_NORMAL,"[sched_seas] data_decoded - avg:%.3f samples:%d start_time:%.0f dr:%.3f lastupdate:%.0f currupdate:%.0f lastcharge:%.3f newcharge:%.3f\n",uptimeavg,samples,start_time,dr,oldtime,newtime,oldcharge,newcharge);
 
     //if the battery charge didn't change or it has been a "long time" since the last update
     //use the last discharge rate saved
-    if(oldcharge > newcharge && newtime <= nextupdate && newtime > oldtime)
+    if(!isNearlyEqual(oldcharge,newcharge) && newtime > oldtime)
         dr = (newtime - oldtime) / (oldcharge-newcharge);
         
     //default discharge rate. (number of seconds to discharge 1% of battery)
@@ -135,17 +121,25 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
         uptime = newtime - start_time + availablecharge*dr;
     
     //update average remain time
-    samples++;
-    delta = uptime - uptimeavg;
-    uptimeavg += delta/samples;
-    newuptime = uptimeavg - (newtime-start_time);
+    if(!isNearlyEqual(oldcharge,newcharge))
+    {
+        samples++;
+        delta = uptime - uptimeavg;
+        uptimeavg += delta/samples;
+        newuptime = uptimeavg - (newtime-start_time);
+    }
+    else
+    {
+        newuptime = uptime;
+    }
+
     log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [HOST#%ld] Battery DR: %.3f%%/secs, Available Battery Pct: %.3f%%  Remaining Uptime: %d secs Jobs in progress: %ld\n", sreq->hostid, drs, availablecharge, newuptime, (sreq->ip_results.size()+sreq->other_results.size())); 
-    log_messages.printf(MSG_NORMAL,"[sched_seas] data_calculated - avg:%.3f samples:%d start_time:%.0f dr:%.3f nextupdate:%.0f\n",uptimeavg,samples,start_time,dr,nextupdate);
+    log_messages.printf(MSG_NORMAL,"[sched_seas] data_calculated - avg:%.3f samples:%d start_time:%.0f dr:%.3f \n",uptimeavg,samples,start_time,dr);
     if(newuptime > 0) {
-	//total time to complete jobs from others projects
-	//it should be 0 always ideally
+	    //total time to complete jobs from others projects
+	    //it should be 0 always ideally
         int inprogress = time_inprogress_op(sreq);
-	log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [HOST#%ld] Estimated in progress job remaining time: %d seconds\n",sreq->hostid,inprogress);
+	    log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [HOST#%ld] Estimated in progress job remaining time: %d seconds\n",sreq->hostid,inprogress);
         if(inprogress < newuptime) {
             for(int i=0; i<nwus; i++) {
                 WU_RESULT& wu = wu_results[i];
@@ -157,6 +151,7 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
                     //they have a 0% of advance
                     int ewop = ewd*sreq->other_results.size();
                     int tot_busy = (int) (tewd+ewd+inprogress+ewop);
+                    if(ewop+inprogress > wu.workunit.delay_bound) continue;
                     log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [RESULT#%ld] Estimated job duration time: %d seconds.\n",wu.resultid,ewd);
                     // the job can't be finish before the battery dies
                     if( tot_busy > newuptime && !sreq->host.on_ac_power && !sreq->host.on_usb_power) {
@@ -182,15 +177,9 @@ void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus)
         log_messages.printf(MSG_NORMAL,"[mge_sched] [seas_sched] [HOST#%ld] Host is about to lost connection because of battery power. Not sending jobs\n",sreq->hostid);
     }
     
-    //we will expect for the next report, twice the total of work sent (it should come before that time)
-    if(tewd > 0)
-        nextupdate = (sreq->host.device_status_time)+(tewd*2);
-    else
-        nextupdate = (sreq->host.device_status_time)+120;
-
     std::string md = data;
     if(updatemge) {  
-        md = encode_sched_data(uptimeavg, samples, start_time, dr, nextupdate,newcharge,newtime);
+        md = encode_sched_data(uptimeavg, samples, start_time, dr, newcharge,newtime);
     }
 
     //we always have to call this method, otherwise it will swipe current data in BD
@@ -209,9 +198,9 @@ void calc_workunit_replicas(SCHEDULER_REQUEST* sreq, WORKUNIT wu, int& reps, int
     double EXPLORATIVE_PROB = 0.2; //20% of the times we use an explorative strategy
     
     std::string data = get_mge_sched_data(sreq->hostid);
-    double avg, start_time, dr, nextupdate,lastcharge,lastupdate;
+    double avg, start_time, dr, lastcharge,lastupdate;
     int samples;
-    decode_sched_data(data,avg,samples,start_time, dr, nextupdate, lastupdate, lastcharge);
+    decode_sched_data(data,avg,samples,start_time, dr, lastcharge,lastupdate);
     if(dr <= 0) dr = 600;
     
     //check last replicas results from 1 to 10 max.
