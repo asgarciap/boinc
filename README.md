@@ -44,5 +44,5 @@ See the GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with BOINC.  If not, see <https://www.gnu.org/licenses/>.
 
-# BOINC-MGE Note
+#### BOINC-MGE Note
 A paper will be published soon describing this extension and its results when used in a mobile grid environment.
