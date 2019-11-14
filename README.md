@@ -1,13 +1,20 @@
-# Status
-
-[![Build Status](https://travis-ci.org/BOINC/boinc.svg?branch=master)](https://travis-ci.org/BOINC/boinc) [![Build status](https://ci.appveyor.com/api/projects/status/9dgoc9h5ppos8vcy/branch/master?svg=true)](https://ci.appveyor.com/project/BOINC/boinc/branch/master) [![Coverity Scan Build Status](https://scan.coverity.com/projects/4226/badge.svg)](https://scan.coverity.com/projects/boinc-boinc) [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/BOINC/boinc/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/BOINC/boinc/?branch=master)
-
 # BOINC
 
 Project Website: https://boinc.berkeley.edu
 
-## Want to create a project
+# BOINC-MGE
+
+Mobile Grid Extension that add some aditional features to BOINC in terms of scheduling strategies.
+Added a predictive model based scheduling strategy for mobile devices that uses the battery consuption rate as a factor for asign and deliver jobs.
+Added a replication strategy that uses a RL like approach to calculate the number of replicas to generate for a given workunit based on the previous results and the battery consumed in other mobile devices.
+Added a BOINC-MGE API that exposes some helper functions to integrate new scheduling strategies when running BOINC in a mobile grid enviroment.
+
+## Want to create a BOINC project
 See: https://boinc.berkeley.edu/trac/wiki
+
+When using BOINC-MGE, some additional database tables have to be created. Be sure to run the SQL script db/schema_mge.sql in your project database if you want to enable BOINC-MGE features.
+
+Also, be sure to compile all boinc components (including Android App) using the flag: --enable-boincmge
 
 ## Want to help translate
 See: https://boinc.berkeley.edu/trac/wiki/TranslateIntro
@@ -36,3 +43,6 @@ See the GNU Lesser General Public License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
 along with BOINC.  If not, see <https://www.gnu.org/licenses/>.
+
+# BOINC-MGE Note
+A paper will be published soon describing this extension and its results when used in a mobile grid environment.
