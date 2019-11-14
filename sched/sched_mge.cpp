@@ -51,6 +51,34 @@
 #include "sched_util.h"
 #include "sched_version.h"
 
+DB_CONN boinc_mge_db;
+static bool db_mge_opened=false;
+
+int open_mge_database() {
+    int retval;
+
+    if (db_mge_opened) {
+        retval = boinc_mge_db.ping();
+        if (retval) {
+            log_messages.printf(MSG_CRITICAL,
+                "lost connection to database - trying to reconnect\n"
+            );
+        } else {
+            return 0;
+        }
+    }
+
+    retval = boinc_mge_db.open(
+        config.db_name, config.db_host, config.db_user, config.db_passwd
+    );
+    if (retval) {
+        log_messages.printf(MSG_CRITICAL, "can't open database\n");
+        return retval;
+    }
+    db_mge_opened = true;
+    return 0;
+}
+
 void mge_log(const char* format, ...)
 {
     char buf[256];
@@ -81,15 +109,46 @@ int estimate_workunit_duration(WORKUNIT* wu, BEST_APP_VERSION* bavp)
     return estimate_duration(*wu,*bavp);
 }
 
-double avg_turnaround_time()
+double avg_turnaround_time(long hostid)
 {
+    if(hostid)
+    {
+        char where[256];
+        DB_HOST h(&boinc_mge_db);
+        snprintf(where, sizeof(where), "where id=%ld", hostid);
+        if(!h.enumerate(where))
+        {
+            h.end_enumerate();
+            return h.avg_turnaround;
+        }
+        h.end_enumerate();
+    }
     return g_reply->host.avg_turnaround;
 }
 
 int add_result_to_reply(WORKUNIT* workunit, BEST_APP_VERSION* bavp)
 {
     bool sema_locked = false;
-    int retadd = 0;    
+    int retadd = 0;
+
+    //check that we are not sending two results (replicas) from the same workunit to this user
+    for(size_t i=0; i<g_reply->results.size();++i) {
+        if(workunit->id == g_reply->results[i].workunitid)
+            return ERR_WU_USER_RULE;
+    }
+
+    //same than before but checking in the database (server_state=4 means IN PROGRESS)
+    DB_RESULT rr(&boinc_mge_db);
+    char where[256] = {0};
+    snprintf(where, sizeof(where), "where workunitid=%ld and server_state=4 and hostid=%ld",workunit->id,g_reply->host.id);
+    long n = 0;
+    if(!rr.count(n, where) && n)
+    {
+        rr.end_enumerate();
+        return ERR_WU_USER_RULE;
+    }
+    rr.end_enumerate();
+
     for (int i=0; i<ssp->max_wu_results; i++) {
         WU_RESULT& wu_result = ssp->wu_results[i];
         if(wu_result.workunit.id == workunit->id) {
@@ -109,7 +168,7 @@ int add_result_to_reply(WORKUNIT* workunit, BEST_APP_VERSION* bavp)
                 continue;
             }
             
-            int retval = wu_is_infeasible_fast(
+            /*int retval = wu_is_infeasible_fast(
                 wu,
                 wu_result.res_server_state, wu_result.res_priority,
                 wu_result.res_report_deadline,
@@ -121,7 +180,7 @@ int add_result_to_reply(WORKUNIT* workunit, BEST_APP_VERSION* bavp)
                 log_messages.printf(MSG_WARNING,"[mge_sched][RESULT#%lu] Job can't be send to the host. %s\n",wu_result.resultid, infeasible_string(retval));
 		retadd = retval;
                 continue;
-            }
+            }*/
                         
             wu_result.state = g_pid;
 
@@ -158,10 +217,10 @@ int add_result_to_reply(WORKUNIT* workunit, BEST_APP_VERSION* bavp)
                     result.id = wu_result.resultid;
                     if (result_still_sendable(result, wu)) {
                         retadd = add_result_to_reply(result, wu, bavp, false);
-			if(sema_locked) {
-			    unlock_sema();	
-			}
-			return retadd;
+			            if(sema_locked) {
+			                unlock_sema();	
+			            }
+			            return retadd;
 
                         // add_result_to_reply() fails only in pathological cases -
                         // e.g. we couldn't update the DB record or modify XML fields.
@@ -184,7 +243,7 @@ int add_result_to_reply(WORKUNIT* workunit, BEST_APP_VERSION* bavp)
 
 DEVICE_STATUS get_last_device_status(long hostid)
 {
-    DB_DEVICE_STATUS d;
+    DB_DEVICE_STATUS d(&boinc_mge_db);
     char buf[256] = {0};
     snprintf(buf, sizeof(buf), "where host_id=%lu", hostid);
     if (!d.enumerate(buf)) {
@@ -192,6 +251,7 @@ DEVICE_STATUS get_last_device_status(long hostid)
         return d;
     }
     else {
+        d.end_enumerate();
         d.clear();
 	    d.hostid=hostid;
         d.insert();
@@ -202,21 +262,27 @@ DEVICE_STATUS get_last_device_status(long hostid)
 std::string get_mge_sched_data(long hostid)
 {   
     char buf[256] = {0};
-    DB_DEVICE_STATUS ds;
+    if(!hostid) hostid = g_reply->host.id;
+    DB_DEVICE_STATUS ds(&boinc_mge_db);
     snprintf(buf, sizeof(buf), "where host_id=%ld", hostid);
     if (!ds.enumerate(buf)) {
         ds.end_enumerate();
         std::string s(ds.mge_sched_data);
-        std::string sd = r_base64_decode(s.c_str(), s.size()).c_str();
-        log_messages.printf(MSG_NORMAL,"Getting mge_sched_data. base64: %s - decoded: %s\n",ds.mge_sched_data,sd.c_str());
+        std::string sd = "";
+        if(s.size()) {
+            sd = r_base64_decode(s.c_str(), s.size()).c_str();
+        }
+        log_messages.printf(MSG_NORMAL,"Getting mge_sched_data. base64: %s - decoded: %s\n",s.c_str(),sd.c_str());
         return sd;
     }
+    ds.end_enumerate();
     log_messages.printf(MSG_NORMAL,"Getting mge_sched_data. No record found for host_id:%ld\n",hostid);
     return "";
 }
 
 void save_mge_sched_data(long hostid, const char* data, int len)
 {
+    if(!hostid) hostid = g_reply->host.id;
     std::string mgedata64 = r_base64_encode(data, len);
 
     log_messages.printf(MSG_NORMAL,"Updating mge_sched_data: %s base64: %s hostid: %ld\n",data,mgedata64.c_str(),hostid);
@@ -233,7 +299,7 @@ void save_mge_sched_data(long hostid, const char* data, int len)
     g_reply->host.user_active = g_request->host.user_active;
     g_reply->host.device_status_time = time(NULL);
     
-    DB_DEVICE_STATUS d;
+    DB_DEVICE_STATUS d(&boinc_mge_db);
     d.hostid=hostid;
     char buf[100];
     sprintf(buf, "where host_id=%lu", hostid);
@@ -251,7 +317,14 @@ void save_mge_sched_data(long hostid, const char* data, int len)
 
 
 void send_work_mge() {
-        
+    
+    int retval = open_mge_database();
+    if (retval) {
+        log_messages.printf(MSG_NORMAL,
+                "[mge_sched] Can't open boinc database for MGE extension.");
+        return;
+    }
+ 
     if (!g_wreq->need_proc_type(PROC_TYPE_CPU)) {
         log_messages.printf(MSG_NORMAL,
                 "[mge_sched] mge sched only supports CPU scheduling and the request doesn't include CPU processor type on it");
@@ -317,7 +390,7 @@ void send_work_mge() {
 	if(!g_request->hostid) 
 		g_request->hostid = g_reply->hostid; 
         log_messages.printf(MSG_NORMAL,"[mge_sched] [HOST#%lu] Invoking MGE scheduler.\n",g_request->hostid);
-        send_work_host(g_request, sched_results, nr);
+        send_work_host(g_request, g_wreq, sched_results, nr);
         g_wreq->best_app_versions.clear();
     }
     else {

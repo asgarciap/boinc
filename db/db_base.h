@@ -43,7 +43,7 @@ inline double safe_atof(const char* s) {
     return atof(s);
 }
 
-#define MAX_QUERY_LEN 162144
+#define MAX_QUERY_LEN 8096
     // TODO: use string for queries, get rid of this
 
 struct CURSOR {

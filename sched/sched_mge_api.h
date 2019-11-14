@@ -22,7 +22,7 @@
 #include "sched_mge.h"
 #include "sched_msgs.h"
 
-extern void send_work_host(SCHEDULER_REQUEST* sreq, WU_RESULT wu_results[], int nwus);
-extern void calc_workunit_replicas(SCHEDULER_REQUEST* sreq, WORKUNIT wu, int& reps, int& quorum);
+extern void send_work_host(SCHEDULER_REQUEST* sreq, WORK_REQ* wreq, WU_RESULT wu_results[], int nwus);
+extern void calc_workunit_replicas(SCHEDULER_REQUEST* sreq, WORKUNIT* wu, int& reps, int& quorum, int max_reps);
 
 #endif

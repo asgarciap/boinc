@@ -20,13 +20,17 @@
 
 extern void send_work_mge();
 
+//keeps other DB connection to performs MGE related queries and avoid conflict with BOINC connection
+extern DB_CONN boinc_mge_db;
+extern int open_mge_database();
+
 //exposed functions to be available in the MGE API
 extern BEST_APP_VERSION* get_best_app_version(WORKUNIT* wu);
 extern int estimate_workunit_duration(WU_RESULT* wr, BEST_APP_VERSION* bavp);
-extern double avg_turnaround_time();
+extern double avg_turnaround_time(long hostid=0);
 extern int add_result_to_reply(WORKUNIT* wu, BEST_APP_VERSION* bavp);
 extern void save_mge_sched_data(long hostid, const char* data, int len);
-extern std::string get_mge_sched_data(long hostid);
+extern std::string get_mge_sched_data(long hostid=0);
 extern DEVICE_STATUS get_last_device_status(long hostid);
 extern void mge_log(const char* format, ...);
 #endif

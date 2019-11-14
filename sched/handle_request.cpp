@@ -713,6 +713,10 @@ int send_result_abort() {
                     //
                     orp.abort = false;
                     orp.abort_if_not_started = true;
+                    #ifdef BOINCMGE
+                    orp.abort = true;
+                    orp.abort_if_not_started = false;
+                    #endif
                     orp.reason = ABORT_REASON_ASSIMILATED;
                 } else if (result.server_state == RESULT_SERVER_STATE_OVER
                     && result.outcome == RESULT_OUTCOME_NO_REPLY
