@@ -52,7 +52,7 @@ android {
 
     defaultConfig {
         applicationId "edu.berkeley.boinc"
-        minSdkVersion 19
+        minSdkVersion 18
         targetSdkVersion 28
         versionCode buildVersionCode()
         versionName buildVersionName()
